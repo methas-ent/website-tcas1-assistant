@@ -1,17 +1,28 @@
-import Link from "next/link";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Badge } from "@/components/ui/Badge";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Table } from "@/components/ui/Table";
-import { getAdminPackageList } from "@/lib/admin-catalog";
+import {
+  formatThaiBahtFromCents,
+  getAdminCatalogErrorMessage,
+  getAdminPackageList,
+} from "@/lib/admin-catalog";
+import {
+  deletePackageAction,
+  quickCreatePackageAction,
+  quickUpdatePackageAction,
+} from "@/lib/admin-catalog-actions";
 import { requireAdmin } from "@/lib/admin";
 import { formatPrice } from "@/lib/storefront";
 
 type AdminPackagesPageProps = {
   searchParams?: {
+    error?: string;
     q?: string;
+    saved?: string;
   };
 };
 
@@ -24,6 +35,7 @@ export default async function AdminPackagesPage({
 
   const query = searchParams?.q ?? "";
   const packages = await getAdminPackageList(query);
+  const error = getAdminCatalogErrorMessage(searchParams?.error);
 
   return (
     <AdminShell
@@ -33,14 +45,45 @@ export default async function AdminPackagesPage({
         { href: "/admin/orders", label: "ออเดอร์" },
         { href: "/admin/courses", label: "คอร์ส" },
         { href: "/admin/packages", label: "แพ็กเกจ", active: true },
+        { href: "/admin/videos", label: "วิดีโอ" },
       ]}
-      actions={
-        <ButtonLink href="/admin/packages/new" size="sm">
-          สร้างแพ็กเกจ
-        </ButtonLink>
-      }
+      actions={<ButtonLink href="/admin/packages/new" size="sm">หน้าเดิม</ButtonLink>}
     >
       <div className="grid gap-6">
+        {error ? (
+          <p className="rounded-card bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">
+            {error}
+          </p>
+        ) : null}
+        {searchParams?.saved ? (
+          <p className="rounded-card bg-success-soft px-4 py-3 text-sm font-semibold text-success">
+            บันทึกข้อมูลแล้ว
+          </p>
+        ) : null}
+
+        <Card>
+          <div className="mb-5">
+            <p className="text-sm font-bold text-primary-700">Quick Add</p>
+            <h2 className="font-heading text-xl font-bold text-ink">
+              สร้างแพ็กเกจแยกไว้ก่อน
+            </h2>
+            <p className="mt-1 text-sm text-ink-muted">
+              ตั้งชื่อก่อน ราคาเริ่มต้น 0 บาท แล้วค่อยตั้งราคา/Ready ทีหลัง
+            </p>
+          </div>
+          <form
+            action={quickCreatePackageAction}
+            className="grid gap-3 sm:grid-cols-[1fr_auto]"
+          >
+            <Input label="ชื่อแพ็กเกจ" name="title" required />
+            <div className="flex items-end">
+              <Button fullWidth type="submit">
+                Add Draft
+              </Button>
+            </div>
+          </form>
+        </Card>
+
         <Card>
           <form className="grid gap-3 sm:grid-cols-[1fr_auto]" method="get">
             <Input
@@ -66,19 +109,57 @@ export default async function AdminPackagesPage({
           columns={[
             {
               key: "title",
-              header: "แพ็กเกจ",
+              header: "แก้ไขแพ็กเกจ",
               cell: (coursePackage) => (
-                <div>
-                  <Link
-                    className="font-bold text-primary-700 hover:text-primary-600"
-                    href={`/admin/packages/${coursePackage.id}/edit`}
-                  >
-                    {coursePackage.title}
-                  </Link>
+                <form
+                  action={quickUpdatePackageAction}
+                  className="grid min-w-[260px] gap-2"
+                >
+                  <input name="packageId" type="hidden" value={coursePackage.id} />
+                  <Input
+                    defaultValue={coursePackage.title}
+                    label="ชื่อแพ็กเกจ"
+                    name="title"
+                    required
+                    size="sm"
+                  />
                   <p className="mt-1 text-xs text-ink-muted">
                     {coursePackage.slug}
                   </p>
-                </div>
+                  <div className="grid gap-2 sm:grid-cols-[1fr_92px]">
+                    <Input
+                      defaultValue={formatThaiBahtFromCents(coursePackage.priceCents)}
+                      label="ราคา"
+                      min="0"
+                      name="priceThb"
+                      required
+                      size="sm"
+                      type="number"
+                    />
+                    <Select
+                      defaultValue={coursePackage.currency || "THB"}
+                      label="สกุล"
+                      name="currency"
+                      required
+                      size="sm"
+                    >
+                      <option value="THB">THB</option>
+                    </Select>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Select
+                      defaultValue={coursePackage.isPublished ? "READY" : "DRAFT"}
+                      name="status"
+                      size="sm"
+                    >
+                      <option value="DRAFT">Draft</option>
+                      <option value="READY">Ready</option>
+                    </Select>
+                    <Button size="sm" type="submit">
+                      Save
+                    </Button>
+                  </div>
+                </form>
               ),
             },
             {
@@ -109,22 +190,30 @@ export default async function AdminPackagesPage({
               header: "สถานะ",
               cell: (coursePackage) => (
                 <Badge variant={coursePackage.isPublished ? "success" : "neutral"}>
-                  {coursePackage.isPublished ? "Published" : "Draft"}
+                  {coursePackage.isPublished ? "Ready" : "Draft"}
                 </Badge>
               ),
             },
             {
               key: "action",
-              header: "แก้ไข",
+              header: "จัดการ",
               align: "right",
               cell: (coursePackage) => (
-                <ButtonLink
-                  href={`/admin/packages/${coursePackage.id}/edit`}
-                  size="sm"
-                  variant="outline"
-                >
-                  Edit
-                </ButtonLink>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <ButtonLink
+                    href={`/admin/packages/${coursePackage.id}/edit`}
+                    size="sm"
+                    variant="outline"
+                  >
+                    คอร์สในแพ็กเกจ
+                  </ButtonLink>
+                  <form action={deletePackageAction}>
+                    <input name="packageId" type="hidden" value={coursePackage.id} />
+                    <Button size="sm" type="submit" variant="danger">
+                      Delete
+                    </Button>
+                  </form>
+                </div>
               ),
             },
           ]}

@@ -16,6 +16,7 @@ import type { AdminVideoUploadCourse } from "@/lib/admin-video";
 type AdminVideoUploadFormProps = {
   action: (formData: FormData) => void | Promise<void>;
   courses: AdminVideoUploadCourse[];
+  returnTo?: string;
 };
 
 function courseSubject(course: AdminVideoUploadCourse) {
@@ -29,6 +30,7 @@ function courseGrade(course: AdminVideoUploadCourse) {
 export function AdminVideoUploadForm({
   action,
   courses,
+  returnTo,
 }: AdminVideoUploadFormProps) {
   const [subjectCategory, setSubjectCategory] = useState("");
   const [gradeLevel, setGradeLevel] = useState("");
@@ -85,6 +87,7 @@ export function AdminVideoUploadForm({
 
   return (
     <form action={action} className="mt-6 grid gap-5" encType="multipart/form-data">
+      {returnTo ? <input name="returnTo" type="hidden" value={returnTo} /> : null}
       <div className="grid gap-4 md:grid-cols-2">
         <Select
           label="หมวดวิชา"

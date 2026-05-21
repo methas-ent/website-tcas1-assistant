@@ -16,9 +16,48 @@ function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
+function videoStatus(formData: FormData) {
+  const status = text(formData, "status");
+
+  return ["UPLOADED", "PROCESSING", "READY", "FAILED"].includes(status)
+    ? status
+    : "UPLOADED";
+}
+
+async function getVideoUsage(videoId: string) {
+  const video = await prisma.videoAsset.findUnique({
+    where: { id: videoId },
+    select: {
+      _count: {
+        select: {
+          lessons: true,
+        },
+      },
+      lessons: {
+        where: {
+          isPublished: true,
+        },
+        select: {
+          id: true,
+        },
+        take: 1,
+      },
+    },
+  });
+
+  return video
+    ? {
+        lessonCount: video._count.lessons,
+        hasPublishedLesson: video.lessons.length > 0,
+      }
+    : null;
+}
+
 export async function uploadVideoAction(formData: FormData) {
   await requireAdmin("/admin/videos/upload");
 
+  const returnTo = text(formData, "returnTo");
+  const uploadPath = returnTo === "/admin/videos" ? returnTo : "/admin/videos/upload";
   const title = text(formData, "title");
   const description = text(formData, "description");
   const subjectCategory = text(formData, "subjectCategory");
@@ -39,7 +78,7 @@ export async function uploadVideoAction(formData: FormData) {
     !isGradeLevel(gradeLevel) ||
     !(file instanceof File)
   ) {
-    redirect("/admin/videos/upload?error=invalid");
+    redirect(`${uploadPath}?error=invalid`);
   }
 
   const lesson = await prisma.lesson.findFirst({
@@ -86,7 +125,7 @@ export async function uploadVideoAction(formData: FormData) {
     lessonSubjectCategory !== subjectCategory ||
     lessonGradeLevel !== gradeLevel
   ) {
-    redirect("/admin/videos/upload?error=invalid-selection");
+    redirect(`${uploadPath}?error=invalid-selection`);
   }
 
   let videoAssetId: string;
@@ -139,14 +178,76 @@ export async function uploadVideoAction(formData: FormData) {
     const code = error instanceof Error ? error.message : "storage";
 
     if (["invalid", "type", "size"].includes(code)) {
-      redirect(`/admin/videos/upload?error=${code}`);
+      redirect(`${uploadPath}?error=${code}`);
     }
 
-    redirect("/admin/videos/upload?error=storage");
+    redirect(`${uploadPath}?error=storage`);
   }
 
   revalidatePath("/admin/videos");
   revalidatePath("/admin/courses");
   revalidatePath(`/admin/courses/${courseId}/edit`);
   redirect(`/admin/videos?uploaded=${videoAssetId}`);
+}
+
+export async function updateVideoAction(formData: FormData) {
+  await requireAdmin("/admin/videos");
+
+  const videoId = text(formData, "videoId");
+  const title = text(formData, "title");
+  const status = videoStatus(formData);
+
+  if (!videoId || !title) {
+    redirect("/admin/videos?error=invalid");
+  }
+
+  const usage = await getVideoUsage(videoId);
+
+  if (!usage) {
+    redirect("/admin/videos?error=invalid");
+  }
+
+  if (usage.hasPublishedLesson && status !== "READY") {
+    redirect("/admin/videos?error=cannot-change-attached");
+  }
+
+  await prisma.videoAsset.update({
+    where: { id: videoId },
+    data: {
+      title,
+      status,
+    },
+  });
+
+  revalidatePath("/admin/videos");
+  revalidatePath("/admin/courses");
+  redirect("/admin/videos?saved=video");
+}
+
+export async function deleteVideoAction(formData: FormData) {
+  await requireAdmin("/admin/videos");
+
+  const videoId = text(formData, "videoId");
+
+  if (!videoId) {
+    redirect("/admin/videos?error=invalid");
+  }
+
+  const usage = await getVideoUsage(videoId);
+
+  if (!usage) {
+    redirect("/admin/videos?error=invalid");
+  }
+
+  if (usage.hasPublishedLesson) {
+    redirect("/admin/videos?error=cannot-delete-attached");
+  }
+
+  await prisma.videoAsset.delete({
+    where: { id: videoId },
+  });
+
+  revalidatePath("/admin/videos");
+  revalidatePath("/admin/courses");
+  redirect("/admin/videos?saved=deleted");
 }

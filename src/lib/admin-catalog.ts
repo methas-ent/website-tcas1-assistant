@@ -8,6 +8,8 @@ export function getAdminCatalogErrorMessage(error?: string) {
     "invalid-package": "กรุณากรอกชื่อ slug และราคาแพ็กเกจให้ถูกต้อง",
     "invalid-chapter": "กรุณากรอกชื่อ chapter และ sort order ให้ถูกต้อง",
     "invalid-lesson": "กรุณากรอกชื่อ lesson และ sort order ให้ถูกต้อง",
+    "cannot-delete-course": "ลบคอร์สไม่ได้ เพราะยังอยู่ในแพ็กเกจหรือมี enrollment แล้ว",
+    "cannot-delete-package": "ลบแพ็กเกจไม่ได้ เพราะมีออเดอร์อ้างอิงอยู่",
     "not-found": "ไม่พบข้อมูลที่ต้องการแก้ไข",
   };
 

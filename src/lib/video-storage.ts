@@ -43,6 +43,9 @@ export function getVideoUploadErrorMessage(error?: string) {
     type: "รองรับเฉพาะไฟล์วิดีโอสำหรับ development upload",
     size: "ไฟล์มีขนาดใหญ่เกินกว่าที่ตั้งค่าไว้",
     storage: "บันทึกไฟล์วิดีโอไม่สำเร็จ",
+    "cannot-change-attached":
+      "วิดีโอที่ผูกกับ lesson แล้วต้องคงสถานะ Ready เพื่อไม่ให้บทเรียนที่เปิดใช้งานเสีย",
+    "cannot-delete-attached": "ลบวิดีโอไม่ได้ เพราะยังผูกกับ lesson ที่เปิดใช้งานอยู่",
   };
 
   return error ? messages[error] ?? "อัปโหลดวิดีโอไม่สำเร็จ" : null;

@@ -10,7 +10,10 @@ export type StorefrontCourse = {
   subtitle: string;
   description: string;
   category: string;
+  subjectCategory: string;
   level: string;
+  gradeLevel: string;
+  subject: string;
   coverImageUrl: string | null;
   courseCode: string;
   lessonCount: number;
@@ -39,7 +42,10 @@ type CourseWithContent = {
   subtitle: string;
   description: string;
   category: string;
+  subjectCategory: string;
   level: string;
+  gradeLevel: string;
+  subject: string;
   coverImageUrl: string | null;
   courseCode: string;
   chapters: Array<{
@@ -58,8 +64,11 @@ function mapCourse(course: CourseWithContent): StorefrontCourse {
     title: course.title,
     subtitle: course.subtitle,
     description: course.description,
-    category: course.category || course.subtitle || "คอร์สออนไลน์",
-    level: course.level || "ออนไลน์",
+    category: course.category || course.subjectCategory || course.subject || "คอร์สออนไลน์",
+    subjectCategory: course.subjectCategory || course.category || course.subject,
+    level: course.level || course.gradeLevel || "ออนไลน์",
+    gradeLevel: course.gradeLevel || course.level,
+    subject: course.subject || course.subjectCategory || course.category,
     coverImageUrl: course.coverImageUrl,
     courseCode: course.courseCode,
     chapterCount: course.chapters.length,
@@ -108,7 +117,10 @@ const courseSelect = {
   subtitle: true,
   description: true,
   category: true,
+  subjectCategory: true,
   level: true,
+  gradeLevel: true,
+  subject: true,
   coverImageUrl: true,
   courseCode: true,
   chapters: {

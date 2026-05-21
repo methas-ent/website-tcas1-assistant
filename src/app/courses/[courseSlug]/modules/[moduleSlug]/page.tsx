@@ -46,8 +46,11 @@ export default async function ModulePage({ params }: ModulePageProps) {
                 Episode list
               </p>
               <h2 className="mt-1 text-2xl font-bold text-ink">
-                เลือก EP ที่ต้องการเรียน
+                ดูรายการบทเรียนก่อนซื้อคอร์ส
               </h2>
+              <p className="mt-1 text-sm text-ink-muted">
+                ผู้สนใจดูชื่อบทเรียนได้ แต่ระบบจะล็อกวิดีโอไว้จนกว่าจะมีสิทธิ์เรียน
+              </p>
             </div>
             <Link
               href="/student/my-courses"

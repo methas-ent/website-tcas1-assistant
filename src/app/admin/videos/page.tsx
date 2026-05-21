@@ -1,13 +1,28 @@
 import { AdminShell } from "@/components/admin/AdminShell";
+import { AdminVideoUploadForm } from "@/components/admin/AdminVideoUploadForm";
 import { Badge } from "@/components/ui/Badge";
-import { ButtonLink } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Table } from "@/components/ui/Table";
-import { getAdminVideos, formatBytes, formatVideoDate } from "@/lib/admin-video";
+import {
+  getAdminVideoUploadCatalog,
+  getAdminVideos,
+  formatBytes,
+  formatVideoDate,
+} from "@/lib/admin-video";
+import {
+  deleteVideoAction,
+  updateVideoAction,
+  uploadVideoAction,
+} from "@/lib/admin-video-actions";
 import { requireAdmin } from "@/lib/admin";
 import {
   getGradeLevelLabel,
   getSubjectCategoryLabel,
 } from "@/lib/course-taxonomy";
+import { getVideoUploadErrorMessage } from "@/lib/video-storage";
 
 type AdminVideo = Awaited<ReturnType<typeof getAdminVideos>>[number];
 
@@ -35,11 +50,15 @@ function statusVariant(status: string) {
 export default async function AdminVideosPage({
   searchParams,
 }: {
-  searchParams?: { uploaded?: string };
+  searchParams?: { error?: string; saved?: string; uploaded?: string };
 }) {
   await requireAdmin("/admin/videos");
 
-  const videos = await getAdminVideos();
+  const [videos, courses] = await Promise.all([
+    getAdminVideos(),
+    getAdminVideoUploadCatalog(),
+  ]);
+  const error = getVideoUploadErrorMessage(searchParams?.error);
 
   return (
     <AdminShell
@@ -58,11 +77,38 @@ export default async function AdminVideosPage({
       }
     >
       <div className="grid gap-5">
+        {error ? (
+          <p className="rounded-card bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">
+            {error}
+          </p>
+        ) : null}
         {searchParams?.uploaded ? (
           <p className="rounded-card bg-success-soft px-4 py-3 text-sm font-semibold text-success">
             อัปโหลดวิดีโอและบันทึก metadata แล้ว
           </p>
         ) : null}
+        {searchParams?.saved ? (
+          <p className="rounded-card bg-success-soft px-4 py-3 text-sm font-semibold text-success">
+            บันทึกข้อมูลวิดีโอแล้ว
+          </p>
+        ) : null}
+
+        <Card>
+          <div className="mb-5">
+            <p className="text-sm font-bold text-primary-700">Quick Add</p>
+            <h2 className="font-heading text-xl font-bold text-ink">
+              อัปโหลดและผูกวิดีโอกับ Lesson
+            </h2>
+            <p className="mt-1 text-sm text-ink-muted">
+              นักเรียนที่ยังไม่ได้ซื้อคอร์สจะเห็นรายการบทเรียนได้ แต่กดดูคลิปไม่ได้
+            </p>
+          </div>
+          <AdminVideoUploadForm
+            action={uploadVideoAction}
+            courses={courses}
+            returnTo="/admin/videos"
+          />
+        </Card>
 
         <Table<AdminVideo>
           data={videos}
@@ -72,8 +118,30 @@ export default async function AdminVideosPage({
           columns={[
             {
               key: "title",
-              header: "ชื่อวิดีโอ",
-              cell: (video) => <p className="font-bold text-ink">{video.title}</p>,
+              header: "แก้ไขวิดีโอ",
+              cell: (video) => (
+                <form action={updateVideoAction} className="grid min-w-[240px] gap-2">
+                  <input name="videoId" type="hidden" value={video.id} />
+                  <Input
+                    defaultValue={video.title}
+                    label="ชื่อวิดีโอ"
+                    name="title"
+                    required
+                    size="sm"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <Select defaultValue={video.status} name="status" size="sm">
+                      <option value="UPLOADED">Uploaded</option>
+                      <option value="PROCESSING">Processing</option>
+                      <option value="READY">Ready</option>
+                      <option value="FAILED">Failed</option>
+                    </Select>
+                    <Button size="sm" type="submit">
+                      Save
+                    </Button>
+                  </div>
+                </form>
+              ),
             },
             {
               key: "file",
@@ -168,6 +236,19 @@ export default async function AdminVideosPage({
               key: "created",
               header: "วันที่อัปโหลด",
               cell: (video) => <span>{formatVideoDate(video.createdAt)}</span>,
+            },
+            {
+              key: "action",
+              header: "จัดการ",
+              align: "right",
+              cell: (video) => (
+                <form action={deleteVideoAction}>
+                  <input name="videoId" type="hidden" value={video.id} />
+                  <Button size="sm" type="submit" variant="danger">
+                    Delete
+                  </Button>
+                </form>
+              ),
             },
           ]}
         />

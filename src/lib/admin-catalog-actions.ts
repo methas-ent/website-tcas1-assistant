@@ -37,7 +37,7 @@ function priceCents(formData: FormData, key: string) {
   return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) : -1;
 }
 
-function validationRedirect(path: string, error: string) {
+function validationRedirect(path: string, error: string): never {
   redirect(`${path}?error=${error}`);
 }
 
@@ -58,6 +58,47 @@ async function ensureUniqueCourseSlug(slug: string, courseId?: string) {
 async function ensureUniquePackageSlug(slug: string, packageId?: string) {
   const existing = await prisma.coursePackage.findUnique({ where: { slug } });
   return !existing || existing.id === packageId;
+}
+
+async function uniqueCourseSlugFromTitle(title: string) {
+  const base = slugify(title) || "course";
+  let candidate = base;
+  let suffix = 2;
+
+  while (await prisma.course.findUnique({ where: { slug: candidate } })) {
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
+
+  return candidate;
+}
+
+async function uniquePackageSlugFromTitle(title: string) {
+  const base = slugify(title) || "package";
+  let candidate = base;
+  let suffix = 2;
+
+  while (await prisma.coursePackage.findUnique({ where: { slug: candidate } })) {
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
+
+  return candidate;
+}
+
+function readyStatus(formData: FormData) {
+  const status = text(formData, "status").toUpperCase();
+
+  if (!status) {
+    return bool(formData, "isPublished");
+  }
+
+  return ["READY", "PUBLISHED", "PUBLISH", "TRUE", "ON"].includes(status);
+}
+
+function packageCurrency(formData: FormData) {
+  const currency = text(formData, "currency").toUpperCase() || "THB";
+  return currency === "THB" ? currency : "";
 }
 
 async function buildChapterSlug(courseId: string, title: string, sortOrder: number) {
@@ -132,6 +173,46 @@ async function ensureValidLessonVideo(
   return !isPublished || videoAsset.status === "READY";
 }
 
+export async function quickCreateCourseAction(formData: FormData) {
+  await requireAdmin("/admin/courses");
+
+  const title = text(formData, "title");
+  const rawSubjectCategory = text(formData, "subjectCategory");
+  const rawGradeLevel = text(formData, "gradeLevel");
+  const subjectCategory = normalizeSubjectCategory(rawSubjectCategory);
+  const gradeLevel = normalizeGradeLevel(rawGradeLevel);
+
+  if (
+    !title ||
+    !isSubjectCategory(rawSubjectCategory) ||
+    !isGradeLevel(rawGradeLevel)
+  ) {
+    validationRedirect("/admin/courses", "invalid-course");
+  }
+
+  const slug = await uniqueCourseSlugFromTitle(title);
+
+  await prisma.course.create({
+    data: {
+      title,
+      slug,
+      subtitle: "",
+      description: "",
+      category: subjectCategory,
+      subjectCategory,
+      gradeLevel,
+      level: gradeLevel,
+      isPublished: readyStatus(formData),
+      courseCode: slug.toUpperCase(),
+      subject: subjectCategory || "คอร์สออนไลน์",
+    },
+  });
+
+  revalidatePath("/admin/courses");
+  revalidatePath("/courses");
+  redirect("/admin/courses?saved=course");
+}
+
 export async function createCourseAction(formData: FormData) {
   await requireAdmin("/admin/courses/new");
 
@@ -168,7 +249,7 @@ export async function createCourseAction(formData: FormData) {
       gradeLevel,
       level,
       coverImageUrl: optionalText(formData, "coverImageUrl"),
-      isPublished: bool(formData, "isPublished"),
+      isPublished: readyStatus(formData),
       courseCode: slug.toUpperCase(),
       subject: subjectCategory || "คอร์สออนไลน์",
     },
@@ -217,7 +298,7 @@ export async function updateCourseAction(formData: FormData) {
       gradeLevel,
       level,
       coverImageUrl: optionalText(formData, "coverImageUrl"),
-      isPublished: bool(formData, "isPublished"),
+      isPublished: readyStatus(formData),
       subject: subjectCategory || "คอร์สออนไลน์",
     },
   });
@@ -226,6 +307,82 @@ export async function updateCourseAction(formData: FormData) {
   revalidatePath(`/admin/courses/${courseId}/edit`);
   revalidatePath("/courses");
   redirect(`/admin/courses/${courseId}/edit?saved=course`);
+}
+
+export async function quickUpdateCourseAction(formData: FormData) {
+  const courseId = text(formData, "courseId");
+  await requireAdmin("/admin/courses");
+
+  const title = text(formData, "title");
+  const rawSubjectCategory = text(formData, "subjectCategory");
+  const rawGradeLevel = text(formData, "gradeLevel");
+  const subjectCategory = normalizeSubjectCategory(rawSubjectCategory);
+  const gradeLevel = normalizeGradeLevel(rawGradeLevel);
+
+  if (
+    !courseId ||
+    !title ||
+    !isSubjectCategory(rawSubjectCategory) ||
+    !isGradeLevel(rawGradeLevel)
+  ) {
+    validationRedirect("/admin/courses", "invalid-course");
+  }
+
+  await prisma.course.update({
+    where: { id: courseId },
+    data: {
+      title,
+      category: subjectCategory,
+      subjectCategory,
+      gradeLevel,
+      level: gradeLevel,
+      isPublished: readyStatus(formData),
+      subject: subjectCategory || "คอร์สออนไลน์",
+    },
+  });
+
+  revalidatePath("/admin/courses");
+  revalidatePath("/courses");
+  redirect("/admin/courses?saved=course");
+}
+
+export async function deleteCourseAction(formData: FormData) {
+  const courseId = text(formData, "courseId");
+  await requireAdmin("/admin/courses");
+
+  const course = courseId
+    ? await prisma.course.findUnique({
+        where: { id: courseId },
+        select: {
+          id: true,
+          _count: {
+            select: {
+              enrollments: true,
+              packageItems: true,
+            },
+          },
+        },
+      })
+    : null;
+
+  if (!course) {
+    validationRedirect("/admin/courses", "not-found");
+  }
+
+  const courseToDelete = course!;
+
+  if (
+    courseToDelete._count.enrollments > 0 ||
+    courseToDelete._count.packageItems > 0
+  ) {
+    validationRedirect("/admin/courses", "cannot-delete-course");
+  }
+
+  await prisma.course.delete({ where: { id: courseToDelete.id } });
+
+  revalidatePath("/admin/courses");
+  revalidatePath("/courses");
+  redirect("/admin/courses?saved=deleted");
 }
 
 export async function createChapterAction(formData: FormData) {
@@ -380,8 +537,9 @@ export async function createPackageAction(formData: FormData) {
   const title = text(formData, "title");
   const slug = slugify(text(formData, "slug"));
   const cents = priceCents(formData, "priceThb");
+  const currency = packageCurrency(formData);
 
-  if (!title || !slug || !isValidSlug(slug) || cents < 0) {
+  if (!title || !slug || !isValidSlug(slug) || cents < 0 || !currency) {
     validationRedirect("/admin/packages/new", "invalid-package");
   }
 
@@ -396,7 +554,7 @@ export async function createPackageAction(formData: FormData) {
         slug,
         description: text(formData, "description"),
         priceCents: cents,
-        currency: text(formData, "currency") || "THB",
+        currency,
         coverImageUrl: optionalText(formData, "coverImageUrl"),
         isPublished: bool(formData, "isPublished"),
       },
@@ -412,6 +570,31 @@ export async function createPackageAction(formData: FormData) {
   redirect(`/admin/packages/${coursePackage.id}/edit`);
 }
 
+export async function quickCreatePackageAction(formData: FormData) {
+  await requireAdmin("/admin/packages");
+
+  const title = text(formData, "title");
+
+  if (!title) {
+    validationRedirect("/admin/packages", "invalid-package");
+  }
+
+  await prisma.coursePackage.create({
+    data: {
+      title,
+      slug: await uniquePackageSlugFromTitle(title),
+      description: "",
+      priceCents: 0,
+      currency: "THB",
+      isPublished: false,
+    },
+  });
+
+  revalidatePath("/admin/packages");
+  revalidatePath("/courses");
+  redirect("/admin/packages?saved=package");
+}
+
 export async function updatePackageAction(formData: FormData) {
   const packageId = text(formData, "packageId");
   await requireAdmin(`/admin/packages/${packageId}/edit`);
@@ -419,8 +602,9 @@ export async function updatePackageAction(formData: FormData) {
   const title = text(formData, "title");
   const slug = slugify(text(formData, "slug"));
   const cents = priceCents(formData, "priceThb");
+  const currency = packageCurrency(formData);
 
-  if (!packageId || !title || !slug || !isValidSlug(slug) || cents < 0) {
+  if (!packageId || !title || !slug || !isValidSlug(slug) || cents < 0 || !currency) {
     validationRedirect(`/admin/packages/${packageId}/edit`, "invalid-package");
   }
 
@@ -439,7 +623,7 @@ export async function updatePackageAction(formData: FormData) {
         slug,
         description: text(formData, "description"),
         priceCents: cents,
-        currency: text(formData, "currency") || "THB",
+        currency,
         coverImageUrl: optionalText(formData, "coverImageUrl"),
         isPublished: bool(formData, "isPublished"),
       },
@@ -452,6 +636,68 @@ export async function updatePackageAction(formData: FormData) {
   revalidatePath(`/admin/packages/${packageId}/edit`);
   revalidatePath("/courses");
   redirect(`/admin/packages/${packageId}/edit?saved=package`);
+}
+
+export async function quickUpdatePackageAction(formData: FormData) {
+  const packageId = text(formData, "packageId");
+  await requireAdmin("/admin/packages");
+
+  const title = text(formData, "title");
+  const cents = priceCents(formData, "priceThb");
+  const currency = packageCurrency(formData);
+
+  if (!packageId || !title || cents < 0 || !currency) {
+    validationRedirect("/admin/packages", "invalid-package");
+  }
+
+  await prisma.coursePackage.update({
+    where: { id: packageId },
+    data: {
+      title,
+      priceCents: cents,
+      currency,
+      isPublished: readyStatus(formData),
+    },
+  });
+
+  revalidatePath("/admin/packages");
+  revalidatePath("/courses");
+  redirect("/admin/packages?saved=package");
+}
+
+export async function deletePackageAction(formData: FormData) {
+  const packageId = text(formData, "packageId");
+  await requireAdmin("/admin/packages");
+
+  const coursePackage = packageId
+    ? await prisma.coursePackage.findUnique({
+        where: { id: packageId },
+        select: {
+          id: true,
+          _count: {
+            select: {
+              orderItems: true,
+            },
+          },
+        },
+      })
+    : null;
+
+  if (!coursePackage) {
+    validationRedirect("/admin/packages", "not-found");
+  }
+
+  const packageToDelete = coursePackage!;
+
+  if (packageToDelete._count.orderItems > 0) {
+    validationRedirect("/admin/packages", "cannot-delete-package");
+  }
+
+  await prisma.coursePackage.delete({ where: { id: packageToDelete.id } });
+
+  revalidatePath("/admin/packages");
+  revalidatePath("/courses");
+  redirect("/admin/packages?saved=deleted");
 }
 
 async function syncPackageCourses(

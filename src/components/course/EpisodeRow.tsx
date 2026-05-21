@@ -28,6 +28,9 @@ export function EpisodeRow({ lesson }: EpisodeRowProps) {
               >
                 {lesson.completed ? "เรียนจบแล้ว" : "ต้องมีสิทธิ์เรียน"}
               </span>
+              <span className="rounded-full bg-warning-soft px-3 py-1 text-warning">
+                ดูรายการได้ คลิปล็อกจนกว่าจะซื้อคอร์ส
+              </span>
             </div>
           </div>
         </div>
@@ -35,7 +38,7 @@ export function EpisodeRow({ lesson }: EpisodeRowProps) {
           href={`/student/lessons/${lesson.id}`}
           className="inline-flex h-11 w-full items-center justify-center rounded-full bg-primary px-5 text-sm font-bold text-white transition hover:bg-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 sm:w-auto"
         >
-          ตรวจสิทธิ์เข้าเรียน
+          ซื้อ/ตรวจสิทธิ์ก่อนดูคลิป
           <span className="ml-2" aria-hidden="true">
             →
           </span>

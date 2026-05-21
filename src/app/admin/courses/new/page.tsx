@@ -81,10 +81,10 @@ export default async function NewCoursePage({
             <Input label="ระดับคอร์ส/Level" name="level" placeholder="เช่น Foundation" />
           </div>
           <Input label="URL รูปปก" name="coverImageUrl" />
-          <label className="flex items-center gap-3 text-sm font-bold text-ink">
-            <input className="h-4 w-4" name="isPublished" type="checkbox" />
-            เผยแพร่คอร์สนี้
-          </label>
+          <Select defaultValue="DRAFT" label="สถานะคอร์ส" name="status" required>
+            <option value="DRAFT">Draft</option>
+            <option value="READY">Ready</option>
+          </Select>
           <Button type="submit">สร้างคอร์ส</Button>
         </form>
       </Card>

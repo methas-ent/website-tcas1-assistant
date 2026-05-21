@@ -106,7 +106,7 @@ export default async function EditCoursePage({
               <p className="mt-1 text-sm text-ink-muted">{course.slug}</p>
             </div>
             <Badge variant={course.isPublished ? "success" : "neutral"} size="md">
-              {course.isPublished ? "Published" : "Draft"}
+              {course.isPublished ? "Ready" : "Draft"}
             </Badge>
           </div>
 
@@ -155,7 +155,15 @@ export default async function EditCoursePage({
               label="URL รูปปก"
               name="coverImageUrl"
             />
-            {checkboxLabel("isPublished", "เผยแพร่คอร์สนี้", course.isPublished)}
+            <Select
+              defaultValue={course.isPublished ? "READY" : "DRAFT"}
+              label="สถานะคอร์ส"
+              name="status"
+              required
+            >
+              <option value="DRAFT">Draft</option>
+              <option value="READY">Ready</option>
+            </Select>
             <Button type="submit">บันทึกคอร์ส</Button>
           </form>
         </Card>
