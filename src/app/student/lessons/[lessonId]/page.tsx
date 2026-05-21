@@ -104,7 +104,7 @@ export default async function StudentLessonPage({
                     : "กดบันทึกเมื่อเรียนบทนี้จบ"}
                 </p>
               </div>
-              <form action={markLessonCompleteAction}>
+              <form action={markLessonCompleteAction} className="w-full sm:w-auto">
                 <input name="lessonId" type="hidden" value={context.lesson.id} />
                 <input
                   name="progressSeconds"
@@ -112,6 +112,7 @@ export default async function StudentLessonPage({
                   value={context.lesson.durationSeconds ?? 0}
                 />
                 <Button
+                  className="w-full sm:w-auto"
                   type="submit"
                   variant={context.lesson.completed ? "outline" : "success"}
                 >
@@ -123,9 +124,10 @@ export default async function StudentLessonPage({
             </div>
           </Card>
 
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="mt-5 grid gap-3 sm:flex sm:items-center sm:justify-between">
             {context.previousLessonId ? (
               <ButtonLink
+                className="w-full sm:w-auto"
                 href={`/student/lessons/${context.previousLessonId}`}
                 variant="outline"
               >
@@ -135,7 +137,10 @@ export default async function StudentLessonPage({
               <span />
             )}
             {context.nextLessonId ? (
-              <ButtonLink href={`/student/lessons/${context.nextLessonId}`}>
+              <ButtonLink
+                className="w-full sm:w-auto"
+                href={`/student/lessons/${context.nextLessonId}`}
+              >
                 EP ถัดไป
               </ButtonLink>
             ) : null}

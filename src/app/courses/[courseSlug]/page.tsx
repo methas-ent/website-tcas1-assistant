@@ -3,12 +3,13 @@ import { notFound } from "next/navigation";
 import { AddToCartButton } from "@/components/public/AddToCartButton";
 import { PublicFooter } from "@/components/public/PublicFooter";
 import { PublicHeader } from "@/components/public/PublicHeader";
+import { ModuleListItem } from "@/components/course/ModuleListItem";
 import { Badge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { formatDuration, getCourseBySlug } from "@/lib/catalog/queries";
+import { getCourseBySlug } from "@/lib/catalog/queries";
 import {
   formatCompactDuration,
   formatPrice,
@@ -34,9 +35,15 @@ export default async function CourseOrPackagePage({ params }: DetailPageProps) {
             eyebrow="Course Package"
             title={coursePackage.title}
             description={coursePackage.description}
-            actions={<AddToCartButton packageId={coursePackage.id} size="lg" />}
+            actions={
+              <AddToCartButton
+                className="w-full sm:w-auto"
+                packageId={coursePackage.id}
+                size="lg"
+              />
+            }
           />
-          <section className="mx-auto grid max-w-7xl gap-6 px-page py-8 lg:grid-cols-[1fr_360px]">
+          <section className="mx-auto grid max-w-7xl gap-6 px-page py-6 sm:py-8 lg:grid-cols-[minmax(0,1fr)_360px]">
             <div className="grid gap-8">
               <Card>
                 <SectionHeader
@@ -47,7 +54,7 @@ export default async function CourseOrPackagePage({ params }: DetailPageProps) {
                 <div className="mt-6 grid gap-4">
                   {coursePackage.courses.map((course) => (
                     <Link
-                      className="grid gap-3 rounded-card border border-line bg-surface-soft p-4 transition hover:border-primary-200 hover:bg-primary-50"
+                      className="grid gap-3 rounded-card border border-line bg-surface-soft p-4 transition hover:border-primary-200 hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
                       href={`/courses/${course.slug}`}
                       key={course.id}
                     >
@@ -121,7 +128,11 @@ export default async function CourseOrPackagePage({ params }: DetailPageProps) {
                   </div>
                 </dl>
                 <div className="mt-6 grid gap-3">
-                  <AddToCartButton packageId={coursePackage.id} size="lg" />
+                  <AddToCartButton
+                    className="w-full"
+                    packageId={coursePackage.id}
+                    size="lg"
+                  />
                   <ButtonLink href="/cart" variant="outline">
                     เปิดตะกร้า
                   </ButtonLink>
@@ -159,15 +170,19 @@ export default async function CourseOrPackagePage({ params }: DetailPageProps) {
           description={course.description}
           actions={
             relatedPackages[0] ? (
-              <AddToCartButton packageId={relatedPackages[0].id} size="lg" />
+              <AddToCartButton
+                className="w-full sm:w-auto"
+                packageId={relatedPackages[0].id}
+                size="lg"
+              />
             ) : (
-              <ButtonLink href="/courses" size="lg">
+              <ButtonLink className="w-full sm:w-auto" href="/courses" size="lg">
                 ดูแพ็กเกจทั้งหมด
               </ButtonLink>
             )
           }
         />
-        <section className="mx-auto grid max-w-7xl gap-6 px-page py-8 lg:grid-cols-[1fr_360px]">
+        <section className="mx-auto grid max-w-7xl gap-6 px-page py-6 sm:py-8 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="grid gap-6">
             <Card>
               <SectionHeader
@@ -177,22 +192,15 @@ export default async function CourseOrPackagePage({ params }: DetailPageProps) {
               />
               <div className="mt-6 grid gap-3">
                 {course.modules.map((courseModule) => (
-                  <div
-                    className="rounded-card border border-line bg-surface-soft p-4"
+                  <ModuleListItem
+                    completedLessonCount={courseModule.completedLessonCount}
+                    href={`/courses/${course.slug}/modules/${courseModule.slug}`}
                     key={courseModule.id}
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <h2 className="font-heading text-lg font-bold text-ink">
-                        {courseModule.sortOrder}. {courseModule.title}
-                      </h2>
-                      <span className="text-xs font-bold text-primary-700">
-                        {courseModule.lessonCount} บทเรียน
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm text-ink-muted">
-                      รวมเวลา {formatDuration(courseModule.totalDurationSeconds)}
-                    </p>
-                  </div>
+                    lessonCount={courseModule.lessonCount}
+                    sortOrder={courseModule.sortOrder}
+                    title={courseModule.title}
+                    totalDurationSeconds={courseModule.totalDurationSeconds}
+                  />
                 ))}
               </div>
             </Card>
@@ -215,9 +223,14 @@ export default async function CourseOrPackagePage({ params }: DetailPageProps) {
                     <p className="mt-2 text-sm text-ink-muted">
                       {formatPrice(item.priceCents, item.currency)}
                     </p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <AddToCartButton packageId={item.id} size="sm" />
+                    <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap">
+                      <AddToCartButton
+                        className="w-full sm:w-auto"
+                        packageId={item.id}
+                        size="sm"
+                      />
                       <ButtonLink
+                        className="w-full sm:w-auto"
                         href={`/courses/${item.slug}`}
                         size="sm"
                         variant="outline"

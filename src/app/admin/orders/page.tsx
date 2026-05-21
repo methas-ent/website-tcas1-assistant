@@ -167,7 +167,7 @@ export default async function AdminOrdersPage({
                     <form action={markOrderPaidAction}>
                       <input name="orderId" type="hidden" value={order.id} />
                       <Button size="sm" type="submit">
-                        Mark PAID
+                        ยืนยันชำระ
                       </Button>
                     </form>
                   ) : null}

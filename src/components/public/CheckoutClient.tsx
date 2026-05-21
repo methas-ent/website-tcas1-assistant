@@ -11,8 +11,8 @@ import {
   clearCartPackages,
   readCartPackageIds,
 } from "@/components/public/cart-storage";
+import { formatPrice } from "@/lib/formatters";
 import type { StorefrontPackage } from "@/lib/storefront";
-import { formatPrice } from "@/lib/storefront";
 
 type CheckoutClientProps = {
   customerEmail: string;
@@ -114,7 +114,7 @@ export function CheckoutClient({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       <form
         className="grid gap-4"
         onSubmit={(event: FormEvent<HTMLFormElement>) => {
@@ -148,7 +148,12 @@ export function CheckoutClient({
           </p>
         ) : null}
 
-        <Button disabled={state.status === "submitting"} size="lg" type="submit">
+        <Button
+          disabled={state.status === "submitting"}
+          fullWidth
+          size="lg"
+          type="submit"
+        >
           {state.status === "submitting"
             ? "กำลังสร้างคำสั่งซื้อ..."
             : "ยืนยันคำสั่งซื้อ"}
@@ -161,7 +166,7 @@ export function CheckoutClient({
           <div className="mt-4 grid gap-3">
             {cartPackages.map((coursePackage) => (
               <div
-                className="flex items-start justify-between gap-3 border-b border-line pb-3 last:border-0 last:pb-0"
+                className="grid gap-2 border-b border-line pb-3 last:border-0 last:pb-0 sm:flex sm:items-start sm:justify-between sm:gap-3"
                 key={coursePackage.id}
               >
                 <div>
@@ -170,7 +175,7 @@ export function CheckoutClient({
                     {coursePackage.courseCount} คอร์ส
                   </p>
                 </div>
-                <p className="shrink-0 font-bold text-primary-700">
+                <p className="shrink-0 font-bold text-primary-700 sm:text-right">
                   {formatPrice(coursePackage.priceCents, coursePackage.currency)}
                 </p>
               </div>

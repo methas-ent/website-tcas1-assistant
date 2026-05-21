@@ -10,11 +10,15 @@ import {
 type AddToCartButtonProps = {
   packageId: string;
   size?: "sm" | "md" | "lg";
+  fullWidth?: boolean;
+  className?: string;
 };
 
 export function AddToCartButton({
   packageId,
   size = "md",
+  fullWidth,
+  className,
 }: AddToCartButtonProps) {
   const [isAdded, setIsAdded] = useState(false);
 
@@ -24,7 +28,13 @@ export function AddToCartButton({
 
   if (isAdded) {
     return (
-      <ButtonLink href="/cart" size={size} variant="outline">
+      <ButtonLink
+        className={className}
+        fullWidth={fullWidth}
+        href="/cart"
+        size={size}
+        variant="outline"
+      >
         ไปที่ตะกร้า
       </ButtonLink>
     );
@@ -32,6 +42,8 @@ export function AddToCartButton({
 
   return (
     <Button
+      className={className}
+      fullWidth={fullWidth}
       onClick={() => {
         addCartPackage(packageId);
         setIsAdded(true);

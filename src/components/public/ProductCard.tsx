@@ -38,7 +38,7 @@ export function ProductCard({
     <Card
       padding="none"
       interactive={Boolean(href)}
-      className={cn("overflow-hidden", className)}
+      className={cn("group flex h-full flex-col overflow-hidden", className)}
     >
       <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-primary-50 via-surface to-accent-50">
         {imageSrc ? (
@@ -47,18 +47,18 @@ export function ProductCard({
             alt={imageAlt ?? title}
             fill
             sizes="(min-width: 1024px) 360px, (min-width: 640px) 50vw, 100vw"
-            className="object-cover"
+            className="object-cover motion-safe:transition-transform motion-safe:duration-500 group-hover:scale-105"
             unoptimized
           />
         ) : (
           <div className="absolute inset-0 grid place-items-center">
-            <span className="rounded-2xl bg-primary px-4 py-3 font-heading text-lg font-black text-white shadow-card">
+            <span className="rounded-2xl bg-primary px-4 py-3 font-heading text-lg font-black text-white shadow-card motion-safe:transition-transform motion-safe:duration-300 group-hover:scale-105">
               VDO
             </span>
           </div>
         )}
       </div>
-      <div className="flex min-h-[240px] flex-col p-5">
+      <div className="flex flex-1 flex-col p-4 sm:min-h-[240px] sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
           {eyebrow ? <Badge variant="primary">{eyebrow}</Badge> : null}
           {badges.map((badge) => (
@@ -73,8 +73,10 @@ export function ProductCard({
             {description}
           </p>
         ) : null}
-        {meta ? <div className="mt-4 text-sm text-ink-soft">{meta}</div> : null}
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-5">
+        {meta ? (
+          <div className="mt-4 text-sm leading-6 text-ink-soft">{meta}</div>
+        ) : null}
+        <div className="mt-auto flex flex-col items-stretch gap-3 pt-5 sm:flex-row sm:items-center sm:justify-between">
           {priceLabel ? (
             <p className="font-heading text-lg font-bold text-primary-700">
               {priceLabel}
@@ -83,7 +85,7 @@ export function ProductCard({
             <span />
           )}
           {href ? (
-            <ButtonLink href={href} size="sm">
+            <ButtonLink href={href} size="sm" className="w-full sm:w-auto">
               {actionLabel}
             </ButtonLink>
           ) : null}

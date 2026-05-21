@@ -27,7 +27,7 @@ function parseCourseIdsSnapshot(value: string | null | undefined) {
 }
 
 export async function markOrderPaidAction(formData: FormData) {
-  await requireAdmin("/admin/orders");
+  const admin = await requireAdmin("/admin/orders");
 
   const orderId = String(formData.get("orderId") ?? "");
 
@@ -35,7 +35,7 @@ export async function markOrderPaidAction(formData: FormData) {
     redirect("/admin/orders");
   }
 
-  await prisma.$transaction(async (tx) => {
+  const grantedCourseIds = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { id: orderId },
       include: {
@@ -56,7 +56,7 @@ export async function markOrderPaidAction(formData: FormData) {
     });
 
     if (!order || order.status === "CANCELLED") {
-      return;
+      return [];
     }
 
     await tx.order.update({
@@ -66,6 +66,8 @@ export async function markOrderPaidAction(formData: FormData) {
         paidAt: order.paidAt ?? new Date(),
       },
     });
+
+    const courseIdsToGrant = new Set<string>();
 
     for (const orderItem of order.items) {
       const snapshotCourseIds = parseCourseIdsSnapshot(
@@ -79,6 +81,7 @@ export async function markOrderPaidAction(formData: FormData) {
       );
 
       for (const courseId of courseIds) {
+        courseIdsToGrant.add(courseId);
         await tx.enrollment.upsert({
           where: {
             userId_courseId: {
@@ -92,18 +95,36 @@ export async function markOrderPaidAction(formData: FormData) {
             orderId: order.id,
             orderItemId: orderItem.id,
             status: "ACTIVE",
+            expiresAt: null,
           },
           update: {
+            orderId: order.id,
+            orderItemId: orderItem.id,
             status: "ACTIVE",
+            expiresAt: null,
           },
         });
       }
     }
+
+    return Array.from(courseIdsToGrant);
+  });
+
+  console.info("admin.order.mark_paid", {
+    adminUserId: admin.id,
+    orderId,
+    grantedCourseCount: grantedCourseIds.length,
   });
 
   revalidatePath("/admin");
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath("/my-courses");
+  revalidatePath("/student");
+  revalidatePath("/student/my-courses");
+  for (const courseId of grantedCourseIds) {
+    revalidatePath(`/student/courses/${courseId}`);
+  }
   redirect(`/admin/orders/${orderId}`);
 }
 

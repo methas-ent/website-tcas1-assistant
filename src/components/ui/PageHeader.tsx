@@ -23,7 +23,7 @@ export function PageHeader({
           : "border-b border-line bg-surface text-ink"
       }
     >
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_auto] lg:items-end lg:px-8">
+      <div className="mx-auto grid max-w-7xl gap-5 px-page py-8 sm:gap-6 sm:py-10 lg:grid-cols-[1fr_auto] lg:items-end">
         <div>
           {eyebrow ? (
             <p
@@ -36,7 +36,7 @@ export function PageHeader({
               {eyebrow}
             </p>
           ) : null}
-          <h1 className="mt-3 max-w-3xl text-3xl font-bold tracking-tight sm:text-4xl">
+          <h1 className="mt-3 max-w-3xl text-2xl font-bold tracking-tight sm:text-4xl">
             {title}
           </h1>
           {description ? (
@@ -51,7 +51,9 @@ export function PageHeader({
             </p>
           ) : null}
         </div>
-        {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
+        {actions ? (
+          <div className="flex flex-wrap gap-3 sm:justify-end">{actions}</div>
+        ) : null}
       </div>
     </section>
   );

@@ -10,8 +10,8 @@ import {
   readCartPackageIds,
   removeCartPackage,
 } from "@/components/public/cart-storage";
+import { formatPrice } from "@/lib/formatters";
 import type { StorefrontPackage } from "@/lib/storefront";
-import { formatPrice } from "@/lib/storefront";
 
 type CartClientProps = {
   packages: StorefrontPackage[];
@@ -58,10 +58,13 @@ export function CartClient({ packages }: CartClientProps) {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       <section className="grid gap-4">
         {cartPackages.map((coursePackage) => (
-          <Card key={coursePackage.id} className="grid gap-4 sm:grid-cols-[1fr_auto]">
+          <Card
+            key={coursePackage.id}
+            className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto]"
+          >
             <div>
               <p className="text-xs font-bold text-primary-700">แพ็กเกจคอร์ส</p>
               <h2 className="mt-1 font-heading text-xl font-bold text-ink">
@@ -75,7 +78,7 @@ export function CartClient({ packages }: CartClientProps) {
                 <span>{coursePackage.lessonCount} บทเรียน</span>
               </div>
             </div>
-            <div className="flex flex-col items-start gap-3 sm:items-end">
+            <div className="flex flex-col items-stretch gap-3 sm:items-end">
               <p className="font-heading text-xl font-bold text-primary-700">
                 {formatPrice(coursePackage.priceCents, coursePackage.currency)}
               </p>
@@ -83,6 +86,7 @@ export function CartClient({ packages }: CartClientProps) {
                 onClick={() => removePackage(coursePackage.id)}
                 size="sm"
                 variant="outline"
+                className="w-full sm:w-auto"
               >
                 นำออก
               </Button>

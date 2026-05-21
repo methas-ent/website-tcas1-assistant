@@ -70,6 +70,7 @@ export function LessonLaunchButton({
             </div>
           </div>
           <Button
+            className="w-full sm:w-auto"
             disabled={locked}
             onClick={() => setOpen(true)}
             type="button"

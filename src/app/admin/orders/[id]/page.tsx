@@ -151,8 +151,14 @@ export default async function AdminOrderDetailPage({
 
           <Card>
             <h2 className="font-heading text-xl font-bold text-ink">
-              Enrollment status
+              สิทธิ์เข้าเรียน
             </h2>
+            {order.status === "PAID" && order.enrollments.length > 0 ? (
+              <p className="mt-2 text-sm leading-6 text-ink-muted">
+                เปิดสิทธิ์ให้ {order.user.name} แล้ว เมื่อนักเรียนเข้าสู่ระบบจะเห็นคอร์สในเมนู
+                คอร์สของฉันและสามารถเข้าเรียนบทเรียนวิดีโอที่มีสิทธิ์ได้
+              </p>
+            ) : null}
             <div className="mt-4 grid gap-2">
               {order.enrollments.map((enrollment) => (
                 <div
@@ -167,7 +173,7 @@ export default async function AdminOrderDetailPage({
               ))}
               {!order.enrollments.length ? (
                 <p className="text-sm text-ink-muted">
-                  ยังไม่มี enrollment ระบบจะสร้างเมื่อ mark เป็น PAID
+                  ยังไม่มีสิทธิ์เข้าเรียน ระบบจะสร้างให้อัตโนมัติเมื่อยืนยันว่าชำระแล้ว
                 </p>
               ) : null}
             </div>
@@ -219,7 +225,7 @@ export default async function AdminOrderDetailPage({
                 <form action={markOrderPaidAction}>
                   <input name="orderId" type="hidden" value={order.id} />
                   <Button fullWidth type="submit">
-                    Mark as PAID
+                    ยืนยันชำระแล้วและเปิดสิทธิ์เรียน
                   </Button>
                 </form>
                 <form action={cancelOrderAction}>

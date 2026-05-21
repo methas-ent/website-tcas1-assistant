@@ -33,13 +33,13 @@ export default async function ModulePage({ params }: ModulePageProps) {
           actions={
             <Link
               href={`/courses/${courseModule.course.slug}`}
-              className="inline-flex h-11 items-center rounded-full bg-white px-5 text-sm font-bold text-primary-700 transition hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-white/70"
+              className="inline-flex h-11 w-full items-center justify-center rounded-full bg-white px-5 text-sm font-bold text-primary-700 transition hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:w-auto"
             >
               กลับหน้าเนื้อหา
             </Link>
           }
         />
-        <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+        <section className="mx-auto max-w-5xl px-page py-6 sm:py-8">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-sm font-bold text-primary-700">
@@ -51,7 +51,7 @@ export default async function ModulePage({ params }: ModulePageProps) {
             </div>
             <Link
               href="/student/my-courses"
-              className="text-sm font-bold text-primary-700 hover:text-primary-600"
+              className="rounded-full text-sm font-bold text-primary-700 hover:text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
             >
               คอร์สของฉัน →
             </Link>

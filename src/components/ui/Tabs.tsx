@@ -86,7 +86,7 @@ export function Tabs({
       <div
         role="tablist"
         aria-label={label}
-        className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full border border-line bg-surface p-1 shadow-sm"
+        className="flex w-full max-w-full gap-1 overflow-x-auto rounded-full border border-line bg-surface p-1 shadow-sm scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] sm:inline-flex sm:w-auto [&::-webkit-scrollbar]:hidden"
         onKeyDown={onKeyDown}
       >
         {items.map((item) => {
@@ -105,7 +105,7 @@ export function Tabs({
               disabled={item.disabled}
               tabIndex={selected ? 0 : -1}
               className={cn(
-                "whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition",
+                "shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition active:scale-[0.98]",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300",
                 selected
                   ? "bg-primary text-white shadow-sm"

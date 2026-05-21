@@ -65,7 +65,7 @@ export function CourseCard({
           </div>
         )}
       </div>
-      <div className="flex min-w-0 flex-col gap-4 p-5">
+      <div className="flex min-w-0 flex-col gap-4 p-4 sm:p-5">
         <div>
           <div className="flex flex-wrap gap-2">
             {courseCode ? <Badge variant="danger">{courseCode}</Badge> : null}
@@ -82,27 +82,31 @@ export function CourseCard({
           ) : null}
         </div>
         <ProgressBar value={progressPercent} />
-        <dl className="grid gap-2 text-sm text-ink-muted sm:grid-cols-3">
-          <div className="rounded-2xl bg-surface-muted p-3">
+        <dl className="grid grid-cols-3 gap-2 text-xs text-ink-muted sm:text-sm">
+          <div className="rounded-2xl bg-surface-muted p-2 sm:p-3">
             <dt className="font-bold text-ink">โมดูล</dt>
             <dd>{typeof moduleCount === "number" ? `${moduleCount} บท` : "-"}</dd>
           </div>
-          <div className="rounded-2xl bg-surface-muted p-3">
+          <div className="rounded-2xl bg-surface-muted p-2 sm:p-3">
             <dt className="font-bold text-ink">บทเรียน</dt>
             <dd>{typeof lessonCount === "number" ? `${lessonCount} EP` : "-"}</dd>
           </div>
-          <div className="rounded-2xl bg-surface-muted p-3">
+          <div className="rounded-2xl bg-surface-muted p-2 sm:p-3">
             <dt className="font-bold text-ink">เวลาเรียน</dt>
             <dd>{durationLabel ?? "-"}</dd>
           </div>
         </dl>
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-auto flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
           {expiresLabel ? (
             <p className="text-xs font-semibold text-ink-muted">{expiresLabel}</p>
           ) : (
             <span />
           )}
-          {href ? <ButtonLink href={href}>{actionLabel}</ButtonLink> : null}
+          {href ? (
+            <ButtonLink className="w-full sm:w-auto" href={href}>
+              {actionLabel}
+            </ButtonLink>
+          ) : null}
         </div>
       </div>
     </Card>

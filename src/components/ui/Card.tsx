@@ -38,7 +38,7 @@ export function Card({
         cardVariants[variant],
         cardPadding[padding],
         interactive &&
-          "transition duration-200 hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-raised",
+          "motion-safe:transition-all motion-safe:duration-300 motion-safe:ease-out hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-raised active:scale-[0.99]",
         className,
       )}
       {...props}

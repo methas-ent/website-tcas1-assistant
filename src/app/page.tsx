@@ -18,36 +18,30 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-surface-soft">
-      <PublicHeader
-        actions={
-          <>
-            <ButtonLink href="/login" size="sm" variant="outline">
-              เข้าสู่ระบบ
-            </ButtonLink>
-            <ButtonLink href="/register" size="sm">
-              สมัครเรียน
-            </ButtonLink>
-          </>
-        }
-      />
+      <PublicHeader />
       <main>
         <section className="bg-surface">
-          <div className="mx-auto grid max-w-7xl gap-10 px-page py-12 lg:grid-cols-[1fr_440px] lg:items-center lg:py-16">
+          <div className="mx-auto grid max-w-7xl gap-8 px-page py-10 sm:py-12 lg:grid-cols-[1fr_440px] lg:items-center lg:py-16">
             <div>
               <p className="text-sm font-bold text-primary-700">
                 VDO Learning Platform
               </p>
-              <h1 className="mt-4 max-w-3xl font-heading text-4xl font-bold text-ink sm:text-5xl">
+              <h1 className="mt-4 max-w-3xl font-heading text-3xl font-bold text-ink sm:text-5xl">
                 เลือกแพ็กเกจคอร์สออนไลน์ แล้วเริ่มเรียนหลังแอดมินยืนยันคำสั่งซื้อ
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-ink-soft">
                 รวมคอร์สเตรียมสอบและคอร์สทักษะสำหรับนักเรียนไทย พร้อมตะกร้าและ checkout แบบรอตรวจสอบการชำระเงิน
               </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <ButtonLink href="/courses" size="lg">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <ButtonLink className="w-full sm:w-auto" href="/courses" size="lg">
                   ดูคอร์สทั้งหมด
                 </ButtonLink>
-                <ButtonLink href="/cart" size="lg" variant="outline">
+                <ButtonLink
+                  className="w-full sm:w-auto"
+                  href="/cart"
+                  size="lg"
+                  variant="outline"
+                >
                   ไปที่ตะกร้า
                 </ButtonLink>
               </div>
@@ -76,6 +70,7 @@ export default async function HomePage() {
                     </p>
                   </div>
                   <AddToCartButton
+                    className="w-full"
                     packageId={featuredPackages[0].id}
                     size="lg"
                   />
@@ -96,7 +91,7 @@ export default async function HomePage() {
               </ButtonLink>
             }
           />
-          <div className="mt-6 grid gap-5 md:grid-cols-3">
+          <div className="mt-6 grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {featuredPackages.map((coursePackage) => (
               <ProductCard
                 key={coursePackage.id}
@@ -115,7 +110,13 @@ export default async function HomePage() {
                     {coursePackage.lessonCount} บทเรียน
                   </span>
                 }
-                footer={<AddToCartButton packageId={coursePackage.id} size="sm" />}
+                footer={
+                  <AddToCartButton
+                    fullWidth
+                    packageId={coursePackage.id}
+                    size="sm"
+                  />
+                }
               />
             ))}
           </div>
@@ -127,7 +128,7 @@ export default async function HomePage() {
             title="คอร์สที่เปิดให้เรียน"
             description="ดูรายละเอียดคอร์สและเลือกแพ็กเกจที่รวมคอร์สเหล่านี้"
           />
-          <div className="mt-6 grid gap-5 md:grid-cols-3">
+          <div className="mt-6 grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {featuredCourses.map((course) => (
               <ProductCard
                 key={course.id}

@@ -7,7 +7,7 @@ type EpisodeRowProps = {
 
 export function EpisodeRow({ lesson }: EpisodeRowProps) {
   return (
-    <article className="rounded-2xl border border-primary-100 bg-white p-4 shadow-sm transition hover:border-primary-200 hover:shadow-card">
+    <article className="rounded-2xl border border-primary-100 bg-surface p-4 shadow-sm transition hover:border-primary-200 hover:shadow-card">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-4">
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary-50 text-sm font-black text-primary-700">
@@ -33,7 +33,7 @@ export function EpisodeRow({ lesson }: EpisodeRowProps) {
         </div>
         <Link
           href={`/student/lessons/${lesson.id}`}
-          className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-5 text-sm font-bold text-white transition hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-300"
+          className="inline-flex h-11 w-full items-center justify-center rounded-full bg-primary px-5 text-sm font-bold text-white transition hover:bg-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 sm:w-auto"
         >
           ตรวจสิทธิ์เข้าเรียน
           <span className="ml-2" aria-hidden="true">
