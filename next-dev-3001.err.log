@@ -1,0 +1,964 @@
+ ⨯ PrismaClientKnownRequestError: 
+Invalid `prisma.course.findMany()` invocation:
+
+
+Operations timed out after `N/A`. Context: The database failed to respond to a query within the configured timeout — see https://pris.ly/d/sqlite-connector for more details. Database: D:\App for VDO\prisma\./dev.db
+    at async getCoursesForUser (./src/lib/catalog/queries.ts:29:21)
+    at async HomePage (./src/app/page.tsx:17:21)
+digest: "3345698378"
+ ⨯ PrismaClientKnownRequestError: 
+Invalid `prisma.course.findMany()` invocation:
+
+
+Operations timed out after `N/A`. Context: The database failed to respond to a query within the configured timeout — see https://pris.ly/d/sqlite-connector for more details. Database: D:\App for VDO\prisma\./dev.db
+    at async getCoursesForUser (./src/lib/catalog/queries.ts:29:21)
+    at async HomePage (./src/app/page.tsx:17:21)
+digest: "3345698378"
+ ⨯ PrismaClientValidationError: 
+Invalid `prisma.course.findMany()` invocation:
+
+{
+  where: {
+    isPublished: true,
+    ~~~~~~~~~~~
+?   AND?: CourseWhereInput | CourseWhereInput[],
+?   OR?: CourseWhereInput[],
+?   NOT?: CourseWhereInput | CourseWhereInput[],
+?   id?: StringFilter | String,
+?   slug?: StringFilter | String,
+?   courseCode?: StringFilter | String,
+?   title?: StringFilter | String,
+?   subject?: StringNullableFilter | String | Null,
+?   level?: StringNullableFilter | String | Null,
+?   description?: StringNullableFilter | String | Null,
+?   coverImageUrl?: StringNullableFilter | String | Null,
+?   priceSatang?: IntFilter | Int,
+?   status?: StringFilter | String,
+?   createdAt?: DateTimeFilter | DateTime,
+?   updatedAt?: DateTimeFilter | DateTime,
+?   chapters?: ChapterListRelationFilter,
+?   lessons?: LessonListRelationFilter,
+?   packageItems?: CoursePackageItemListRelationFilter,
+?   orderItems?: OrderItemListRelationFilter,
+?   enrollments?: EnrollmentListRelationFilter,
+?   progress?: CourseProgressListRelationFilter
+  },
+  orderBy: {
+    createdAt: "asc"
+  },
+  select: {
+    id: true,
+    slug: true,
+    courseCode: true,
+    title: true,
+    subject: true,
+    level: true,
+    description: true,
+    coverImageUrl: true,
+    progress: {
+      where: {
+        userKey: "demo-user"
+      },
+      select: {
+        percentComplete: true
+      }
+    },
+    chapters: {
+      where: {
+        isPublished: true
+      },
+      orderBy: {
+        sortOrder: "asc"
+      },
+      select: {
+        id: true,
+        lessons: {
+          where: {
+            isPublished: true
+          },
+          orderBy: {
+            sortOrder: "asc"
+          },
+          select: {
+            id: true,
+            durationSeconds: true
+          }
+        }
+      }
+    }
+  }
+}
+
+Unknown argument `isPublished`. Available options are marked with ?.
+    at async getCoursesForUser (./src/lib/catalog/queries.ts:29:21)
+    at async HomePage (./src/app/page.tsx:17:21)
+digest: "2281028156"
+ ⨯ PrismaClientValidationError: 
+Invalid `prisma.course.findMany()` invocation:
+
+{
+  where: {
+    isPublished: true,
+    ~~~~~~~~~~~
+?   AND?: CourseWhereInput | CourseWhereInput[],
+?   OR?: CourseWhereInput[],
+?   NOT?: CourseWhereInput | CourseWhereInput[],
+?   id?: StringFilter | String,
+?   slug?: StringFilter | String,
+?   courseCode?: StringFilter | String,
+?   title?: StringFilter | String,
+?   subject?: StringNullableFilter | String | Null,
+?   level?: StringNullableFilter | String | Null,
+?   description?: StringNullableFilter | String | Null,
+?   coverImageUrl?: StringNullableFilter | String | Null,
+?   priceSatang?: IntFilter | Int,
+?   status?: StringFilter | String,
+?   createdAt?: DateTimeFilter | DateTime,
+?   updatedAt?: DateTimeFilter | DateTime,
+?   chapters?: ChapterListRelationFilter,
+?   lessons?: LessonListRelationFilter,
+?   packageItems?: CoursePackageItemListRelationFilter,
+?   orderItems?: OrderItemListRelationFilter,
+?   enrollments?: EnrollmentListRelationFilter,
+?   progress?: CourseProgressListRelationFilter
+  },
+  orderBy: {
+    createdAt: "asc"
+  },
+  select: {
+    id: true,
+    slug: true,
+    courseCode: true,
+    title: true,
+    subject: true,
+    level: true,
+    description: true,
+    coverImageUrl: true,
+    progress: {
+      where: {
+        userKey: "demo-user"
+      },
+      select: {
+        percentComplete: true
+      }
+    },
+    chapters: {
+      where: {
+        isPublished: true
+      },
+      orderBy: {
+        sortOrder: "asc"
+      },
+      select: {
+        id: true,
+        lessons: {
+          where: {
+            isPublished: true
+          },
+          orderBy: {
+            sortOrder: "asc"
+          },
+          select: {
+            id: true,
+            durationSeconds: true
+          }
+        }
+      }
+    }
+  }
+}
+
+Unknown argument `isPublished`. Available options are marked with ?.
+    at async getCoursesForUser (./src/lib/catalog/queries.ts:29:21)
+    at async HomePage (./src/app/page.tsx:17:21)
+digest: "2281028156"
+ ⨯ PrismaClientValidationError: 
+Invalid `prisma.course.findMany()` invocation:
+
+{
+  where: {
+    isPublished: true,
+    ~~~~~~~~~~~
+?   AND?: CourseWhereInput | CourseWhereInput[],
+?   OR?: CourseWhereInput[],
+?   NOT?: CourseWhereInput | CourseWhereInput[],
+?   id?: StringFilter | String,
+?   slug?: StringFilter | String,
+?   courseCode?: StringFilter | String,
+?   title?: StringFilter | String,
+?   subject?: StringNullableFilter | String | Null,
+?   level?: StringNullableFilter | String | Null,
+?   description?: StringNullableFilter | String | Null,
+?   coverImageUrl?: StringNullableFilter | String | Null,
+?   priceSatang?: IntFilter | Int,
+?   status?: StringFilter | String,
+?   createdAt?: DateTimeFilter | DateTime,
+?   updatedAt?: DateTimeFilter | DateTime,
+?   chapters?: ChapterListRelationFilter,
+?   lessons?: LessonListRelationFilter,
+?   packageItems?: CoursePackageItemListRelationFilter,
+?   orderItems?: OrderItemListRelationFilter,
+?   enrollments?: EnrollmentListRelationFilter,
+?   progress?: CourseProgressListRelationFilter
+  },
+  orderBy: {
+    createdAt: "asc"
+  },
+  select: {
+    id: true,
+    slug: true,
+    courseCode: true,
+    title: true,
+    subject: true,
+    level: true,
+    description: true,
+    coverImageUrl: true,
+    progress: {
+      where: {
+        userKey: "demo-user"
+      },
+      select: {
+        percentComplete: true
+      }
+    },
+    chapters: {
+      where: {
+        isPublished: true
+      },
+      orderBy: {
+        sortOrder: "asc"
+      },
+      select: {
+        id: true,
+        lessons: {
+          where: {
+            isPublished: true
+          },
+          orderBy: {
+            sortOrder: "asc"
+          },
+          select: {
+            id: true,
+            durationSeconds: true
+          }
+        }
+      }
+    }
+  }
+}
+
+Unknown argument `isPublished`. Available options are marked with ?.
+    at async getCoursesForUser (./src/lib/catalog/queries.ts:29:21)
+    at async HomePage (./src/app/page.tsx:17:21)
+digest: "2281028156"
+ ⨯ PrismaClientValidationError: 
+Invalid `prisma.course.findMany()` invocation:
+
+{
+  where: {
+    isPublished: true,
+    ~~~~~~~~~~~
+?   AND?: CourseWhereInput | CourseWhereInput[],
+?   OR?: CourseWhereInput[],
+?   NOT?: CourseWhereInput | CourseWhereInput[],
+?   id?: StringFilter | String,
+?   slug?: StringFilter | String,
+?   courseCode?: StringFilter | String,
+?   title?: StringFilter | String,
+?   subject?: StringNullableFilter | String | Null,
+?   level?: StringNullableFilter | String | Null,
+?   description?: StringNullableFilter | String | Null,
+?   coverImageUrl?: StringNullableFilter | String | Null,
+?   priceSatang?: IntFilter | Int,
+?   status?: StringFilter | String,
+?   createdAt?: DateTimeFilter | DateTime,
+?   updatedAt?: DateTimeFilter | DateTime,
+?   chapters?: ChapterListRelationFilter,
+?   lessons?: LessonListRelationFilter,
+?   packageItems?: CoursePackageItemListRelationFilter,
+?   orderItems?: OrderItemListRelationFilter,
+?   enrollments?: EnrollmentListRelationFilter,
+?   progress?: CourseProgressListRelationFilter
+  },
+  orderBy: {
+    createdAt: "asc"
+  },
+  select: {
+    id: true,
+    slug: true,
+    courseCode: true,
+    title: true,
+    subject: true,
+    level: true,
+    description: true,
+    coverImageUrl: true,
+    progress: {
+      where: {
+        userKey: "demo-user"
+      },
+      select: {
+        percentComplete: true
+      }
+    },
+    chapters: {
+      where: {
+        isPublished: true
+      },
+      orderBy: {
+        sortOrder: "asc"
+      },
+      select: {
+        id: true,
+        lessons: {
+          where: {
+            isPublished: true
+          },
+          orderBy: {
+            sortOrder: "asc"
+          },
+          select: {
+            id: true,
+            durationSeconds: true
+          }
+        }
+      }
+    }
+  }
+}
+
+Unknown argument `isPublished`. Available options are marked with ?.
+    at async getCoursesForUser (./src/lib/catalog/queries.ts:29:21)
+    at async HomePage (./src/app/page.tsx:17:21)
+digest: "2281028156"
+ ⨯ PrismaClientValidationError: 
+Invalid `prisma.course.findMany()` invocation:
+
+{
+  where: {
+    isPublished: true,
+    ~~~~~~~~~~~
+?   AND?: CourseWhereInput | CourseWhereInput[],
+?   OR?: CourseWhereInput[],
+?   NOT?: CourseWhereInput | CourseWhereInput[],
+?   id?: StringFilter | String,
+?   slug?: StringFilter | String,
+?   courseCode?: StringFilter | String,
+?   title?: StringFilter | String,
+?   subject?: StringNullableFilter | String | Null,
+?   level?: StringNullableFilter | String | Null,
+?   description?: StringNullableFilter | String | Null,
+?   coverImageUrl?: StringNullableFilter | String | Null,
+?   priceSatang?: IntFilter | Int,
+?   status?: StringFilter | String,
+?   createdAt?: DateTimeFilter | DateTime,
+?   updatedAt?: DateTimeFilter | DateTime,
+?   chapters?: ChapterListRelationFilter,
+?   lessons?: LessonListRelationFilter,
+?   packageItems?: CoursePackageItemListRelationFilter,
+?   orderItems?: OrderItemListRelationFilter,
+?   enrollments?: EnrollmentListRelationFilter,
+?   progress?: CourseProgressListRelationFilter
+  },
+  orderBy: {
+    createdAt: "asc"
+  },
+  select: {
+    id: true,
+    slug: true,
+    courseCode: true,
+    title: true,
+    subject: true,
+    level: true,
+    description: true,
+    coverImageUrl: true,
+    progress: {
+      where: {
+        userKey: "demo-user"
+      },
+      select: {
+        percentComplete: true
+      }
+    },
+    chapters: {
+      where: {
+        isPublished: true
+      },
+      orderBy: {
+        sortOrder: "asc"
+      },
+      select: {
+        id: true,
+        lessons: {
+          where: {
+            isPublished: true
+          },
+          orderBy: {
+            sortOrder: "asc"
+          },
+          select: {
+            id: true,
+            durationSeconds: true
+          }
+        }
+      }
+    }
+  }
+}
+
+Unknown argument `isPublished`. Available options are marked with ?.
+    at async getCoursesForUser (./src/lib/catalog/queries.ts:29:21)
+    at async HomePage (./src/app/page.tsx:17:21)
+digest: "2281028156"
+ ⨯ PrismaClientValidationError: 
+Invalid `prisma.course.findMany()` invocation:
+
+{
+  where: {
+    isPublished: true,
+    ~~~~~~~~~~~
+?   AND?: CourseWhereInput | CourseWhereInput[],
+?   OR?: CourseWhereInput[],
+?   NOT?: CourseWhereInput | CourseWhereInput[],
+?   id?: StringFilter | String,
+?   slug?: StringFilter | String,
+?   courseCode?: StringFilter | String,
+?   title?: StringFilter | String,
+?   subject?: StringNullableFilter | String | Null,
+?   level?: StringNullableFilter | String | Null,
+?   description?: StringNullableFilter | String | Null,
+?   coverImageUrl?: StringNullableFilter | String | Null,
+?   priceSatang?: IntFilter | Int,
+?   status?: StringFilter | String,
+?   createdAt?: DateTimeFilter | DateTime,
+?   updatedAt?: DateTimeFilter | DateTime,
+?   chapters?: ChapterListRelationFilter,
+?   lessons?: LessonListRelationFilter,
+?   packageItems?: CoursePackageItemListRelationFilter,
+?   orderItems?: OrderItemListRelationFilter,
+?   enrollments?: EnrollmentListRelationFilter,
+?   progress?: CourseProgressListRelationFilter
+  },
+  orderBy: {
+    createdAt: "asc"
+  },
+  select: {
+    id: true,
+    slug: true,
+    courseCode: true,
+    title: true,
+    subject: true,
+    level: true,
+    description: true,
+    coverImageUrl: true,
+    progress: {
+      where: {
+        userKey: "demo-user"
+      },
+      select: {
+        percentComplete: true
+      }
+    },
+    chapters: {
+      where: {
+        isPublished: true
+      },
+      orderBy: {
+        sortOrder: "asc"
+      },
+      select: {
+        id: true,
+        lessons: {
+          where: {
+            isPublished: true
+          },
+          orderBy: {
+            sortOrder: "asc"
+          },
+          select: {
+            id: true,
+            durationSeconds: true
+          }
+        }
+      }
+    }
+  }
+}
+
+Unknown argument `isPublished`. Available options are marked with ?.
+    at async getCoursesForUser (./src/lib/catalog/queries.ts:29:21)
+    at async HomePage (./src/app/page.tsx:17:21)
+digest: "2281028156"
+ ⨯ PrismaClientValidationError: 
+Invalid `prisma.course.findMany()` invocation:
+
+{
+  where: {
+    isPublished: true,
+    ~~~~~~~~~~~
+?   AND?: CourseWhereInput | CourseWhereInput[],
+?   OR?: CourseWhereInput[],
+?   NOT?: CourseWhereInput | CourseWhereInput[],
+?   id?: StringFilter | String,
+?   slug?: StringFilter | String,
+?   courseCode?: StringFilter | String,
+?   title?: StringFilter | String,
+?   subject?: StringNullableFilter | String | Null,
+?   level?: StringNullableFilter | String | Null,
+?   description?: StringNullableFilter | String | Null,
+?   coverImageUrl?: StringNullableFilter | String | Null,
+?   priceSatang?: IntFilter | Int,
+?   status?: StringFilter | String,
+?   createdAt?: DateTimeFilter | DateTime,
+?   updatedAt?: DateTimeFilter | DateTime,
+?   chapters?: ChapterListRelationFilter,
+?   lessons?: LessonListRelationFilter,
+?   packageItems?: CoursePackageItemListRelationFilter,
+?   orderItems?: OrderItemListRelationFilter,
+?   enrollments?: EnrollmentListRelationFilter,
+?   progress?: CourseProgressListRelationFilter
+  },
+  orderBy: {
+    createdAt: "asc"
+  },
+  select: {
+    id: true,
+    slug: true,
+    courseCode: true,
+    title: true,
+    subject: true,
+    level: true,
+    description: true,
+    coverImageUrl: true,
+    progress: {
+      where: {
+        userKey: "demo-user"
+      },
+      select: {
+        percentComplete: true
+      }
+    },
+    chapters: {
+      where: {
+        isPublished: true
+      },
+      orderBy: {
+        sortOrder: "asc"
+      },
+      select: {
+        id: true,
+        lessons: {
+          where: {
+            isPublished: true
+          },
+          orderBy: {
+            sortOrder: "asc"
+          },
+          select: {
+            id: true,
+            durationSeconds: true
+          }
+        }
+      }
+    }
+  }
+}
+
+Unknown argument `isPublished`. Available options are marked with ?.
+    at async getCoursesForUser (./src/lib/catalog/queries.ts:29:21)
+    at async HomePage (./src/app/page.tsx:17:21)
+digest: "2281028156"
+ ⨯ PrismaClientValidationError: 
+Invalid `prisma.course.findMany()` invocation:
+
+{
+  where: {
+    isPublished: true,
+    ~~~~~~~~~~~
+?   AND?: CourseWhereInput | CourseWhereInput[],
+?   OR?: CourseWhereInput[],
+?   NOT?: CourseWhereInput | CourseWhereInput[],
+?   id?: StringFilter | String,
+?   slug?: StringFilter | String,
+?   courseCode?: StringFilter | String,
+?   title?: StringFilter | String,
+?   subject?: StringNullableFilter | String | Null,
+?   level?: StringNullableFilter | String | Null,
+?   description?: StringNullableFilter | String | Null,
+?   coverImageUrl?: StringNullableFilter | String | Null,
+?   priceSatang?: IntFilter | Int,
+?   status?: StringFilter | String,
+?   createdAt?: DateTimeFilter | DateTime,
+?   updatedAt?: DateTimeFilter | DateTime,
+?   chapters?: ChapterListRelationFilter,
+?   lessons?: LessonListRelationFilter,
+?   packageItems?: CoursePackageItemListRelationFilter,
+?   orderItems?: OrderItemListRelationFilter,
+?   enrollments?: EnrollmentListRelationFilter,
+?   progress?: CourseProgressListRelationFilter
+  },
+  orderBy: {
+    createdAt: "asc"
+  },
+  select: {
+    id: true,
+    slug: true,
+    courseCode: true,
+    title: true,
+    subject: true,
+    level: true,
+    description: true,
+    coverImageUrl: true,
+    progress: {
+      where: {
+        userKey: "demo-user"
+      },
+      select: {
+        percentComplete: true
+      }
+    },
+    chapters: {
+      where: {
+        isPublished: true
+      },
+      orderBy: {
+        sortOrder: "asc"
+      },
+      select: {
+        id: true,
+        lessons: {
+          where: {
+            isPublished: true
+          },
+          orderBy: {
+            sortOrder: "asc"
+          },
+          select: {
+            id: true,
+            durationSeconds: true
+          }
+        }
+      }
+    }
+  }
+}
+
+Unknown argument `isPublished`. Available options are marked with ?.
+    at async getCoursesForUser (./src/lib/catalog/queries.ts:29:21)
+    at async HomePage (./src/app/page.tsx:17:21)
+digest: "2281028156"
+ ⨯ PrismaClientValidationError: 
+Invalid `prisma.course.findMany()` invocation:
+
+{
+  where: {
+    isPublished: true,
+    ~~~~~~~~~~~
+?   AND?: CourseWhereInput | CourseWhereInput[],
+?   OR?: CourseWhereInput[],
+?   NOT?: CourseWhereInput | CourseWhereInput[],
+?   id?: StringFilter | String,
+?   slug?: StringFilter | String,
+?   courseCode?: StringFilter | String,
+?   title?: StringFilter | String,
+?   subject?: StringNullableFilter | String | Null,
+?   level?: StringNullableFilter | String | Null,
+?   description?: StringNullableFilter | String | Null,
+?   coverImageUrl?: StringNullableFilter | String | Null,
+?   priceSatang?: IntFilter | Int,
+?   status?: StringFilter | String,
+?   createdAt?: DateTimeFilter | DateTime,
+?   updatedAt?: DateTimeFilter | DateTime,
+?   chapters?: ChapterListRelationFilter,
+?   lessons?: LessonListRelationFilter,
+?   packageItems?: CoursePackageItemListRelationFilter,
+?   orderItems?: OrderItemListRelationFilter,
+?   enrollments?: EnrollmentListRelationFilter,
+?   progress?: CourseProgressListRelationFilter
+  },
+  orderBy: {
+    createdAt: "asc"
+  },
+  select: {
+    id: true,
+    slug: true,
+    courseCode: true,
+    title: true,
+    subject: true,
+    level: true,
+    description: true,
+    coverImageUrl: true,
+    progress: {
+      where: {
+        userKey: "demo-user"
+      },
+      select: {
+        percentComplete: true
+      }
+    },
+    chapters: {
+      where: {
+        isPublished: true
+      },
+      orderBy: {
+        sortOrder: "asc"
+      },
+      select: {
+        id: true,
+        lessons: {
+          where: {
+            isPublished: true
+          },
+          orderBy: {
+            sortOrder: "asc"
+          },
+          select: {
+            id: true,
+            durationSeconds: true
+          }
+        }
+      }
+    }
+  }
+}
+
+Unknown argument `isPublished`. Available options are marked with ?.
+    at async getCoursesForUser (./src/lib/catalog/queries.ts:29:21)
+    at async HomePage (./src/app/page.tsx:17:21)
+digest: "2281028156"
+ ⨯ PrismaClientValidationError: 
+Invalid `prisma.course.findMany()` invocation:
+
+{
+  where: {
+    isPublished: true,
+    ~~~~~~~~~~~
+?   AND?: CourseWhereInput | CourseWhereInput[],
+?   OR?: CourseWhereInput[],
+?   NOT?: CourseWhereInput | CourseWhereInput[],
+?   id?: StringFilter | String,
+?   slug?: StringFilter | String,
+?   courseCode?: StringFilter | String,
+?   title?: StringFilter | String,
+?   subject?: StringNullableFilter | String | Null,
+?   level?: StringNullableFilter | String | Null,
+?   description?: StringNullableFilter | String | Null,
+?   coverImageUrl?: StringNullableFilter | String | Null,
+?   priceSatang?: IntFilter | Int,
+?   status?: StringFilter | String,
+?   createdAt?: DateTimeFilter | DateTime,
+?   updatedAt?: DateTimeFilter | DateTime,
+?   chapters?: ChapterListRelationFilter,
+?   lessons?: LessonListRelationFilter,
+?   packageItems?: CoursePackageItemListRelationFilter,
+?   orderItems?: OrderItemListRelationFilter,
+?   enrollments?: EnrollmentListRelationFilter,
+?   progress?: CourseProgressListRelationFilter
+  },
+  orderBy: {
+    createdAt: "asc"
+  },
+  select: {
+    id: true,
+    slug: true,
+    courseCode: true,
+    title: true,
+    subject: true,
+    level: true,
+    description: true,
+    coverImageUrl: true,
+    progress: {
+      where: {
+        userKey: "demo-user"
+      },
+      select: {
+        percentComplete: true
+      }
+    },
+    chapters: {
+      where: {
+        isPublished: true
+      },
+      orderBy: {
+        sortOrder: "asc"
+      },
+      select: {
+        id: true,
+        lessons: {
+          where: {
+            isPublished: true
+          },
+          orderBy: {
+            sortOrder: "asc"
+          },
+          select: {
+            id: true,
+            durationSeconds: true
+          }
+        }
+      }
+    }
+  }
+}
+
+Unknown argument `isPublished`. Available options are marked with ?.
+    at async getCoursesForUser (./src/lib/catalog/queries.ts:29:21)
+    at async HomePage (./src/app/page.tsx:17:21)
+digest: "2281028156"
+ ⨯ PrismaClientValidationError: 
+Invalid `prisma.course.findMany()` invocation:
+
+{
+  where: {
+    isPublished: true,
+    ~~~~~~~~~~~
+?   AND?: CourseWhereInput | CourseWhereInput[],
+?   OR?: CourseWhereInput[],
+?   NOT?: CourseWhereInput | CourseWhereInput[],
+?   id?: StringFilter | String,
+?   slug?: StringFilter | String,
+?   courseCode?: StringFilter | String,
+?   title?: StringFilter | String,
+?   subject?: StringNullableFilter | String | Null,
+?   level?: StringNullableFilter | String | Null,
+?   description?: StringNullableFilter | String | Null,
+?   coverImageUrl?: StringNullableFilter | String | Null,
+?   priceSatang?: IntFilter | Int,
+?   status?: StringFilter | String,
+?   createdAt?: DateTimeFilter | DateTime,
+?   updatedAt?: DateTimeFilter | DateTime,
+?   chapters?: ChapterListRelationFilter,
+?   lessons?: LessonListRelationFilter,
+?   packageItems?: CoursePackageItemListRelationFilter,
+?   orderItems?: OrderItemListRelationFilter,
+?   enrollments?: EnrollmentListRelationFilter,
+?   progress?: CourseProgressListRelationFilter
+  },
+  orderBy: {
+    createdAt: "asc"
+  },
+  select: {
+    id: true,
+    slug: true,
+    courseCode: true,
+    title: true,
+    subject: true,
+    level: true,
+    description: true,
+    coverImageUrl: true,
+    progress: {
+      where: {
+        userKey: "demo-user"
+      },
+      select: {
+        percentComplete: true
+      }
+    },
+    chapters: {
+      where: {
+        isPublished: true
+      },
+      orderBy: {
+        sortOrder: "asc"
+      },
+      select: {
+        id: true,
+        lessons: {
+          where: {
+            isPublished: true
+          },
+          orderBy: {
+            sortOrder: "asc"
+          },
+          select: {
+            id: true,
+            durationSeconds: true
+          }
+        }
+      }
+    }
+  }
+}
+
+Unknown argument `isPublished`. Available options are marked with ?.
+    at async getCoursesForUser (./src/lib/catalog/queries.ts:29:21)
+    at async HomePage (./src/app/page.tsx:17:21)
+digest: "2281028156"
+ ⨯ PrismaClientValidationError: 
+Invalid `prisma.course.findMany()` invocation:
+
+{
+  where: {
+    isPublished: true,
+    ~~~~~~~~~~~
+?   AND?: CourseWhereInput | CourseWhereInput[],
+?   OR?: CourseWhereInput[],
+?   NOT?: CourseWhereInput | CourseWhereInput[],
+?   id?: StringFilter | String,
+?   slug?: StringFilter | String,
+?   courseCode?: StringFilter | String,
+?   title?: StringFilter | String,
+?   subject?: StringNullableFilter | String | Null,
+?   level?: StringNullableFilter | String | Null,
+?   description?: StringNullableFilter | String | Null,
+?   coverImageUrl?: StringNullableFilter | String | Null,
+?   priceSatang?: IntFilter | Int,
+?   status?: StringFilter | String,
+?   createdAt?: DateTimeFilter | DateTime,
+?   updatedAt?: DateTimeFilter | DateTime,
+?   chapters?: ChapterListRelationFilter,
+?   lessons?: LessonListRelationFilter,
+?   packageItems?: CoursePackageItemListRelationFilter,
+?   orderItems?: OrderItemListRelationFilter,
+?   enrollments?: EnrollmentListRelationFilter,
+?   progress?: CourseProgressListRelationFilter
+  },
+  orderBy: {
+    createdAt: "asc"
+  },
+  select: {
+    id: true,
+    slug: true,
+    courseCode: true,
+    title: true,
+    subject: true,
+    level: true,
+    description: true,
+    coverImageUrl: true,
+    progress: {
+      where: {
+        userKey: "demo-user"
+      },
+      select: {
+        percentComplete: true
+      }
+    },
+    chapters: {
+      where: {
+        isPublished: true
+      },
+      orderBy: {
+        sortOrder: "asc"
+      },
+      select: {
+        id: true,
+        lessons: {
+          where: {
+            isPublished: true
+          },
+          orderBy: {
+            sortOrder: "asc"
+          },
+          select: {
+            id: true,
+            durationSeconds: true
+          }
+        }
+      }
+    }
+  }
+}
+
+Unknown argument `isPublished`. Available options are marked with ?.
+    at async getCoursesForUser (./src/lib/catalog/queries.ts:29:21)
+    at async HomePage (./src/app/page.tsx:17:21)
+digest: "2281028156"

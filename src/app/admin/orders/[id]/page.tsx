@@ -1,0 +1,238 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { AdminShell } from "@/components/admin/AdminShell";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { cancelOrderAction, markOrderPaidAction } from "@/lib/admin-actions";
+import {
+  getAdminOrderDetail,
+  getStatusLabel,
+  requireAdmin,
+} from "@/lib/admin";
+import { formatPrice } from "@/lib/storefront";
+
+type OrderDetailPageProps = {
+  params: {
+    id: string;
+  };
+};
+
+function statusVariant(status: string) {
+  if (status === "PAID") {
+    return "success" as const;
+  }
+
+  if (status === "CANCELLED") {
+    return "danger" as const;
+  }
+
+  return "warning" as const;
+}
+
+function formatDate(value: Date | null) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("th-TH", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(value);
+}
+
+export default async function AdminOrderDetailPage({
+  params,
+}: OrderDetailPageProps) {
+  await requireAdmin(`/admin/orders/${params.id}`);
+
+  const order = await getAdminOrderDetail(params.id);
+
+  if (!order) {
+    notFound();
+  }
+
+  const enrollmentCourseIds = new Set(
+    order.enrollments.map((enrollment) => enrollment.courseId),
+  );
+  const canMutate = order.status !== "PAID" && order.status !== "CANCELLED";
+
+  return (
+    <AdminShell
+      title="รายละเอียดคำสั่งซื้อ"
+      navItems={[
+        { href: "/admin", label: "แดชบอร์ด" },
+        { href: "/admin/orders", label: "ออเดอร์", active: true },
+        { href: "/admin/courses", label: "คอร์ส" },
+        { href: "/admin/packages", label: "แพ็กเกจ" },
+      ]}
+      actions={
+        <Link
+          className="text-sm font-bold text-primary-700"
+          href="/admin/orders"
+        >
+          กลับรายการออเดอร์
+        </Link>
+      }
+    >
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <section className="grid gap-6">
+          <Card>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold text-primary-700">Order</p>
+                <h1 className="font-heading text-2xl font-bold text-ink">
+                  {order.id}
+                </h1>
+                <p className="mt-2 text-sm text-ink-muted">
+                  สร้างเมื่อ {formatDate(order.createdAt)}
+                </p>
+              </div>
+              <Badge variant={statusVariant(order.status)} size="md">
+                {getStatusLabel(order.status)}
+              </Badge>
+            </div>
+          </Card>
+
+          <Card>
+            <h2 className="font-heading text-xl font-bold text-ink">
+              รายการแพ็กเกจ
+            </h2>
+            <div className="mt-5 grid gap-4">
+              {order.items.map((item) => (
+                <div
+                  className="rounded-card border border-line bg-surface-soft p-4"
+                  key={item.id}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-heading text-lg font-bold text-ink">
+                        {item.titleSnapshot}
+                      </h3>
+                      <p className="mt-1 text-sm text-ink-muted">
+                        {formatPrice(item.priceCentsSnapshot, order.currency)}
+                      </p>
+                    </div>
+                    <Badge variant="outline">
+                      {item.coursePackage.items.length} คอร์ส
+                    </Badge>
+                  </div>
+                  <div className="mt-4 grid gap-2">
+                    {item.coursePackage.items.map((packageCourse) => {
+                      const enrolled = enrollmentCourseIds.has(
+                        packageCourse.course.id,
+                      );
+
+                      return (
+                        <div
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-card bg-surface p-3 text-sm"
+                          key={packageCourse.course.id}
+                        >
+                          <div>
+                            <p className="font-bold text-ink">
+                              {packageCourse.course.title}
+                            </p>
+                            <p className="text-xs text-ink-muted">
+                              {packageCourse.course.category} ·{" "}
+                              {packageCourse.course.level}
+                            </p>
+                          </div>
+                          <Badge variant={enrolled ? "success" : "neutral"}>
+                            {enrolled ? "เปิดสิทธิ์แล้ว" : "ยังไม่เปิดสิทธิ์"}
+                          </Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card>
+            <h2 className="font-heading text-xl font-bold text-ink">
+              Enrollment status
+            </h2>
+            <div className="mt-4 grid gap-2">
+              {order.enrollments.map((enrollment) => (
+                <div
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-line p-3 text-sm"
+                  key={enrollment.id}
+                >
+                  <span className="font-bold text-ink">
+                    {enrollment.course.title}
+                  </span>
+                  <Badge variant="success">{enrollment.status}</Badge>
+                </div>
+              ))}
+              {!order.enrollments.length ? (
+                <p className="text-sm text-ink-muted">
+                  ยังไม่มี enrollment ระบบจะสร้างเมื่อ mark เป็น PAID
+                </p>
+              ) : null}
+            </div>
+          </Card>
+        </section>
+
+        <aside className="lg:sticky lg:top-24 lg:self-start">
+          <Card>
+            <h2 className="font-heading text-xl font-bold text-ink">
+              ข้อมูลลูกค้า
+            </h2>
+            <dl className="mt-5 grid gap-3 text-sm">
+              <div>
+                <dt className="font-bold text-ink">ชื่อ</dt>
+                <dd className="mt-1 text-ink-muted">{order.customerName}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-ink">อีเมล</dt>
+                <dd className="mt-1 text-ink-muted">{order.customerEmail}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-ink">โทรศัพท์</dt>
+                <dd className="mt-1 text-ink-muted">
+                  {order.customerPhone ?? "-"}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-bold text-ink">หมายเหตุ</dt>
+                <dd className="mt-1 whitespace-pre-wrap text-ink-muted">
+                  {order.note ?? "-"}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-bold text-ink">ชำระเมื่อ</dt>
+                <dd className="mt-1 text-ink-muted">{formatDate(order.paidAt)}</dd>
+              </div>
+            </dl>
+            <div className="mt-6 border-t border-line pt-5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-bold text-ink">ยอดรวม</span>
+                <span className="font-heading text-2xl font-bold text-primary-700">
+                  {formatPrice(order.totalCents, order.currency)}
+                </span>
+              </div>
+            </div>
+
+            {canMutate ? (
+              <div className="mt-6 grid gap-3">
+                <form action={markOrderPaidAction}>
+                  <input name="orderId" type="hidden" value={order.id} />
+                  <Button fullWidth type="submit">
+                    Mark as PAID
+                  </Button>
+                </form>
+                <form action={cancelOrderAction}>
+                  <input name="orderId" type="hidden" value={order.id} />
+                  <Button fullWidth type="submit" variant="outline">
+                    Cancel order
+                  </Button>
+                </form>
+              </div>
+            ) : null}
+          </Card>
+        </aside>
+      </div>
+    </AdminShell>
+  );
+}

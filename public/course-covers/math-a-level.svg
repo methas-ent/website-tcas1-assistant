@@ -1,0 +1,20 @@
+<svg width="960" height="640" viewBox="0 0 960 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="960" height="640" rx="56" fill="#0B5FBF"/>
+  <path d="M0 430C138 350 265 370 382 490C505 616 663 666 960 520V640H0V430Z" fill="#1E5BFF"/>
+  <path d="M628 0C610 97 658 160 767 187C865 211 930 266 960 364V0H628Z" fill="#8EAEFF" fill-opacity=".55"/>
+  <circle cx="165" cy="148" r="76" fill="#FFFFFF" fill-opacity=".16"/>
+  <circle cx="796" cy="470" r="118" fill="#FFFFFF" fill-opacity=".12"/>
+  <g stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity=".85">
+    <path d="M148 397C201 289 277 236 376 236C475 236 552 289 604 397"/>
+    <path d="M180 340H572"/>
+    <path d="M225 282L530 282"/>
+    <path d="M376 236V397"/>
+    <path d="M604 397L650 329L698 397"/>
+    <path d="M722 329V397"/>
+    <path d="M722 329H770C791 329 804 342 804 363C804 384 791 397 770 397H722"/>
+  </g>
+  <text x="82" y="130" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="42" font-weight="800">A-Level</text>
+  <text x="82" y="186" fill="#FFFFFF" fill-opacity=".88" font-family="Arial, sans-serif" font-size="32" font-weight="700">Mathematics 1</text>
+  <text x="82" y="550" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="56" font-weight="900">Knowledge VDO</text>
+  <text x="82" y="592" fill="#DCE6FF" font-family="Arial, sans-serif" font-size="24" font-weight="700">เรียนเป็นบท ดูซ้ำได้ ติดตามความคืบหน้า</text>
+</svg>

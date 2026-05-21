@@ -1,0 +1,333 @@
+// VDO Learning Platform - Full LMS MVP Prisma schema.
+// Datasource: SQLite for local development.
+//
+// SQLite enum note:
+// SQLite has no native enum support in Prisma. Enum-like fields are stored as
+// String columns, with allowed values documented above each field. Validate
+// them in server-side application code before writes.
+//
+// Security notes:
+// - Store passwords only as passwordHash values.
+// - Do not store provider secrets, raw playback tokens, or raw private video
+//   URLs in these tables.
+// - Device/IP/UA identifiers used for playback/session controls must be
+//   stored as one-way hashes.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String @id @default(cuid())
+  name         String
+  email        String @unique
+  passwordHash String
+
+  // Allowed values: "ADMIN" | "STUDENT"
+  role String @default("STUDENT")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions         Session[]
+  orders           Order[]
+  enrollments      Enrollment[]
+  courseProgress   CourseProgress[]
+  lessonProgress   LessonProgress[]
+  playbackSessions PlaybackSession[]
+
+  @@index([role])
+}
+
+model Session {
+  id               String   @id @default(cuid())
+  userId           String
+  sessionTokenHash String   @unique
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Course {
+  id              String  @id @default(cuid())
+  slug            String  @unique
+  title           String
+  subtitle        String  @default("")
+  description     String  @default("")
+  subjectCategory String  @default("")
+  gradeLevel      String  @default("")
+  category        String  @default("")
+  level           String  @default("")
+  coverImageUrl   String?
+  isPublished     Boolean @default(false)
+
+  // Compatibility/catalog fields used by the current Thai course UI.
+  courseCode String @default("")
+  subject    String @default("")
+
+  // Optional direct-course pricing for future storefront expansion.
+  priceCents Int    @default(0)
+  currency   String @default("THB")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chapters     Chapter[]
+  lessons      Lesson[]
+  packageItems CoursePackageItem[]
+  enrollments  Enrollment[]
+  progress     CourseProgress[]
+
+  @@index([isPublished])
+  @@index([subjectCategory])
+  @@index([gradeLevel])
+  @@index([category])
+  @@index([courseCode])
+}
+
+model Chapter {
+  id          String   @id @default(cuid())
+  courseId    String
+  slug        String
+  title       String
+  description String?
+  sortOrder   Int      @default(0)
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@unique([courseId, slug])
+  @@index([courseId, sortOrder])
+  @@index([isPublished])
+}
+
+model Lesson {
+  id              String  @id @default(cuid())
+  courseId        String
+  chapterId       String
+  title           String
+  description     String?
+  sortOrder       Int     @default(0)
+  durationSeconds Int?
+  videoAssetId    String?
+  isPreview       Boolean @default(false)
+  isPublished     Boolean @default(false)
+
+  // Compatibility field for the current Thai lesson list display.
+  epNumber Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course     Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  chapter    Chapter           @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  videoAsset VideoAsset?       @relation(fields: [videoAssetId], references: [id], onDelete: SetNull)
+  progress   LessonProgress[]
+  sessions   PlaybackSession[]
+
+  @@unique([chapterId, epNumber])
+  @@index([courseId, sortOrder])
+  @@index([chapterId, sortOrder])
+  @@index([videoAssetId])
+  @@index([isPublished])
+}
+
+model VideoAsset {
+  id    String @id @default(cuid())
+  title String
+
+  // Allowed values: "LOCAL" | "S3" | "R2" | "CLOUD"
+  storageProvider String @default("LOCAL")
+
+  // Provider/object-storage key only. Do not store raw private playback URLs.
+  storageKey       String @unique
+  originalFileName String
+  mimeType         String
+  sizeBytes        BigInt @default(0)
+
+  // Allowed values: "UPLOADED" | "PROCESSING" | "READY" | "FAILED"
+  status String @default("UPLOADED")
+
+  durationSeconds Int?
+  metadataJson    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  lessons Lesson[]
+
+  @@index([storageProvider, status])
+}
+
+model CoursePackage {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  title         String
+  description   String   @default("")
+  priceCents    Int
+  currency      String   @default("THB")
+  coverImageUrl String?
+  isPublished   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  items      CoursePackageItem[]
+  orderItems OrderItem[]
+
+  @@index([isPublished])
+}
+
+model CoursePackageItem {
+  packageId String
+  courseId  String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  coursePackage CoursePackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  course        Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([packageId, courseId])
+  @@index([packageId, sortOrder])
+  @@index([courseId])
+}
+
+model Order {
+  id     String @id @default(cuid())
+  userId String
+
+  // Allowed values: "PENDING_PAYMENT" | "PENDING_REVIEW" | "PAID" | "CANCELLED"
+  status String @default("PENDING_REVIEW")
+
+  totalCents    Int
+  currency      String    @default("THB")
+  customerName  String
+  customerEmail String
+  customerPhone String?
+  note          String?
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items       OrderItem[]
+  enrollments Enrollment[]
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+}
+
+model OrderItem {
+  id                    String   @id @default(cuid())
+  orderId               String
+  packageId             String
+  titleSnapshot         String
+  priceCentsSnapshot    Int
+  courseIdsSnapshotJson String   @default("[]")
+  createdAt             DateTime @default(now())
+
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  coursePackage CoursePackage @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  enrollments   Enrollment[]
+
+  @@index([orderId])
+  @@index([packageId])
+}
+
+model Enrollment {
+  id          String  @id @default(cuid())
+  userId      String
+  courseId    String
+  orderId     String?
+  orderItemId String?
+
+  // Allowed values: "ACTIVE" | "EXPIRED" | "CANCELLED"
+  status String @default("ACTIVE")
+
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  order     Order?     @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  orderItem OrderItem? @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, courseId])
+  @@index([courseId, status])
+  @@index([orderId])
+  @@index([orderItemId])
+}
+
+model CourseProgress {
+  id              String   @id @default(cuid())
+  userId          String?
+  userKey         String   @default("demo-user")
+  courseId        String
+  percentComplete Int      @default(0) // 0..100, enforced by app validation.
+  lastLessonId    String?
+  updatedAt       DateTime @updatedAt
+
+  user   User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userKey, courseId])
+  @@unique([userId, courseId])
+  @@index([userKey, courseId])
+  @@index([userId, courseId])
+}
+
+model LessonProgress {
+  id              String    @id @default(cuid())
+  userId          String?
+  userKey         String    @default("demo-user")
+  lessonId        String
+  completedAt     DateTime?
+  progressSeconds Int       @default(0)
+  updatedAt       DateTime  @updatedAt
+
+  user   User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userKey, lessonId])
+  @@unique([userId, lessonId])
+  @@index([userKey, lessonId])
+  @@index([userId, lessonId])
+}
+
+model PlaybackSession {
+  id       String  @id @default(cuid())
+  userId   String?
+  userKey  String  @default("demo-user")
+  lessonId String
+
+  // Allowed values: "ACTIVE" | "ENDED" | "REVOKED" | "EXPIRED"
+  status String @default("ACTIVE")
+
+  startedAt       DateTime  @default(now())
+  lastHeartbeatAt DateTime?
+  endedAt         DateTime?
+
+  // Hashed identifiers only - never raw values.
+  deviceFingerprintHash String?
+  ipHash                String?
+  userAgentHash         String?
+
+  user   User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([userKey, lessonId, status])
+  @@index([userId, lessonId, status])
+  @@index([status])
+}
