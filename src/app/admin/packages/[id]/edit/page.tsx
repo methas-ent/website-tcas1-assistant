@@ -54,12 +54,12 @@ export default async function EditPackagePage({
       navItems={[
         { href: "/admin", label: "แดชบอร์ด" },
         { href: "/admin/orders", label: "ออเดอร์" },
-        { href: "/admin/courses", label: "คอร์ส" },
-        { href: "/admin/packages", label: "แพ็กเกจ", active: true },
+        { href: "/admin/courses", label: "แพ็กเกจ/คอร์ส", active: true },
+        { href: "/admin/videos", label: "วิดีโอ" },
       ]}
       actions={
-        <ButtonLink href="/admin/packages" size="sm" variant="outline">
-          กลับรายการแพ็กเกจ
+        <ButtonLink href="/admin/courses" size="sm" variant="outline">
+          กลับแพ็กเกจ/คอร์ส
         </ButtonLink>
       }
     >
@@ -88,7 +88,11 @@ export default async function EditPackagePage({
           </p>
         ) : null}
 
-        <form action={updatePackageAction} className="mt-6 grid gap-4">
+        <form
+          action={updatePackageAction}
+          className="mt-6 grid gap-4"
+          encType="multipart/form-data"
+        >
           <input name="packageId" type="hidden" value={coursePackage.id} />
           <Input
             defaultValue={coursePackage.title}
@@ -123,10 +127,23 @@ export default async function EditPackagePage({
               required
             />
           </div>
+          {coursePackage.coverImageUrl ? (
+            <div className="grid gap-2">
+              <p className="text-sm font-bold text-ink-soft">รูปปกปัจจุบัน</p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                alt={`รูปปกแพ็กเกจ ${coursePackage.title}`}
+                className="aspect-video w-full max-w-xl rounded-card border border-line bg-surface-soft object-cover"
+                src={coursePackage.coverImageUrl}
+              />
+            </div>
+          ) : null}
           <Input
-            defaultValue={coursePackage.coverImageUrl ?? ""}
-            label="URL รูปปก"
-            name="coverImageUrl"
+            accept="image/png"
+            hint="เลือกไฟล์ใหม่เพื่อเปลี่ยนรูปปกเดิม รองรับเฉพาะ PNG ไม่เกิน 5MB"
+            label="อัปโหลดรูปปก PNG"
+            name="coverImageFile"
+            type="file"
           />
           <label className="flex items-center gap-3 text-sm font-bold text-ink">
             <input
@@ -143,34 +160,65 @@ export default async function EditPackagePage({
               คอร์สในแพ็กเกจ
             </h2>
             <p className="mt-1 text-sm text-ink-muted">
-              ลำดับในแพ็กเกจจะเรียงตามลำดับ checkbox ที่แสดงในหน้านี้
+              เลือกคอร์สที่รวมอยู่ในแพ็กเกจนี้ แล้วกดบันทึกได้ทุกครั้งที่ต้องการเพิ่ม/ลดคอร์ส
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {courses.map((course) => (
-                <label
-                  className="flex items-start gap-3 rounded-card border border-line bg-surface p-3 text-sm"
+                <div
+                  className="rounded-card border border-line bg-surface p-3 text-sm"
                   key={course.id}
                 >
-                  <input
-                    className="mt-1 h-4 w-4"
-                    defaultChecked={selectedCourseIds.has(course.id)}
-                    name="courseIds"
-                    type="checkbox"
-                    value={course.id}
-                  />
-                  <span>
-                    <span className="block font-bold text-ink">{course.title}</span>
-                    <span className="block text-xs text-ink-muted">
-                      {getSubjectCategoryLabel(
-                        course.subjectCategory,
-                        course.category,
-                      )} ·{" "}
-                      {getGradeLevelLabel(course.gradeLevel, course.level)} ·{" "}
-                      {course.isPublished ? "Published" : "Draft"}
+                  <label className="flex items-start gap-3">
+                    <input
+                      className="mt-1 h-4 w-4"
+                      defaultChecked={selectedCourseIds.has(course.id)}
+                      name="courseIds"
+                      type="checkbox"
+                      value={course.id}
+                    />
+                    <span>
+                      <span className="block font-bold text-ink">{course.title}</span>
+                      <span className="block text-xs text-ink-muted">
+                        {getSubjectCategoryLabel(
+                          course.subjectCategory,
+                          course.category,
+                        )} ·{" "}
+                        {getGradeLevelLabel(course.gradeLevel, course.level)} ·{" "}
+                        {course.isPublished ? "Published" : "Draft"}
+                      </span>
                     </span>
-                  </span>
-                </label>
+                  </label>
+                  <div className="mt-3 flex flex-wrap gap-2 pl-7">
+                    <ButtonLink
+                      href={`/admin/courses/${course.id}/edit`}
+                      size="sm"
+                      variant="outline"
+                    >
+                      เพิ่ม Chapter/Lesson
+                    </ButtonLink>
+                    <ButtonLink href="/admin/videos/upload" size="sm" variant="outline">
+                      อัปโหลด VDO
+                    </ButtonLink>
+                  </div>
+                </div>
               ))}
+            </div>
+          </section>
+
+          <section className="rounded-card border border-primary-100 bg-primary-50 p-4">
+            <h2 className="font-heading text-lg font-bold text-ink">
+              เพิ่มเนื้อหาในคอร์ส
+            </h2>
+            <p className="mt-1 text-sm text-ink-muted">
+              หลังเลือกคอร์สในแพ็กเกจแล้ว เข้าไปที่ “เพิ่ม Chapter/Lesson” เพื่อสร้าง Chapter ที่ n, คำอธิบาย, lesson และผูก VDO ภายหลังได้
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <ButtonLink href="/admin/courses" size="sm" variant="outline">
+                กลับไปเพิ่มคอร์สใหม่
+              </ButtonLink>
+              <ButtonLink href="/admin/videos/upload" size="sm">
+                อัปโหลด VDO เข้าคอร์ส
+              </ButtonLink>
             </div>
           </section>
 

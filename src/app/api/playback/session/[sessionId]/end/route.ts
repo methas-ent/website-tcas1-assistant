@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { getCurrentUserFromRequest } from "@/lib/auth";
 import { endPlaybackSession } from "@/lib/playback-session";
 
 export const runtime = "nodejs";
@@ -9,8 +10,12 @@ type PlaybackEndRouteProps = {
   };
 };
 
-export async function POST(_request: Request, { params }: PlaybackEndRouteProps) {
-  const result = await endPlaybackSession(params.sessionId);
+export async function POST(
+  request: NextRequest,
+  { params }: PlaybackEndRouteProps,
+) {
+  const user = await getCurrentUserFromRequest(request);
+  const result = await endPlaybackSession(params.sessionId, user);
 
   if (!result.ok) {
     return NextResponse.json(

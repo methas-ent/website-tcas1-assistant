@@ -2,6 +2,7 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { Readable } from "node:stream";
 import { NextResponse, type NextRequest } from "next/server";
+import { getCurrentUserFromRequest } from "@/lib/auth";
 import { authorizePlaybackSession } from "@/lib/playback-session";
 import { verifyPlaybackToken } from "@/lib/secure-playback";
 import { resolveLocalVideoPath } from "@/lib/video-storage";
@@ -84,13 +85,32 @@ export async function GET(
     return NextResponse.json({ error: "Invalid playback token" }, { status: 401 });
   }
 
-  const sessionAccess = await authorizePlaybackSession(payload.sessionId);
+  const user = await getCurrentUserFromRequest(request);
+  const sessionAccess = await authorizePlaybackSession(payload.sessionId, user);
 
   if (!sessionAccess.ok) {
+    console.warn("playback.stream.denied", {
+      sessionId: payload.sessionId,
+      error: sessionAccess.error,
+    });
+
     return NextResponse.json(
       { error: sessionAccess.error },
       { status: sessionAccess.status },
     );
+  }
+
+  if (
+    payload.userId !== sessionAccess.session.userId ||
+    payload.lessonId !== sessionAccess.session.lessonId
+  ) {
+    console.warn("playback.stream.token_mismatch", {
+      sessionId: payload.sessionId,
+      tokenLessonId: payload.lessonId,
+      sessionLessonId: sessionAccess.session.lessonId,
+    });
+
+    return NextResponse.json({ error: "Token mismatch" }, { status: 403 });
   }
 
   const videoAsset = sessionAccess.access.lesson.videoAsset;

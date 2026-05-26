@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 type VideoPlayerProps = {
   lessonId: string;
   title: string;
+  userLabel?: string;
 };
 
 type PlaybackState =
@@ -60,7 +61,7 @@ async function signalPlaybackSession(
   }).catch(() => undefined);
 }
 
-export function VideoPlayer({ lessonId, title }: VideoPlayerProps) {
+export function VideoPlayer({ lessonId, title, userLabel }: VideoPlayerProps) {
   const [now, setNow] = useState(() => new Date());
   const [playback, setPlayback] = useState<PlaybackState>({ status: "loading" });
   const sessionCode = useMemo(() => lessonId.slice(-6).toUpperCase(), [lessonId]);
@@ -178,7 +179,7 @@ export function VideoPlayer({ lessonId, title }: VideoPlayerProps) {
         {playback.status === "ready" ? (
           <div className="pointer-events-none absolute inset-0">
             <div className="absolute left-[12%] top-[18%] rounded-full border border-white/20 bg-ink/40 px-4 py-2 text-xs font-semibold text-white/70 backdrop-blur">
-              token · {sessionCode}
+              {userLabel ?? "authorized user"} · {sessionCode}
             </div>
             <div className="absolute bottom-[14%] right-[10%] rounded-full border border-white/20 bg-ink/40 px-4 py-2 text-xs font-semibold text-white/70 backdrop-blur">
               {now.toLocaleString("th-TH", {
@@ -190,7 +191,7 @@ export function VideoPlayer({ lessonId, title }: VideoPlayerProps) {
         ) : null}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-ink px-4 py-3 text-sm text-white/70">
-        <span>Lesson ID: {lessonId}</span>
+        <span>ห้ามบันทึกหน้าจอ แชร์ลิงก์ หรือเผยแพร่วิดีโอต่อ</span>
         <span>
           {playback.status === "ready"
             ? `Token หมดอายุ ${new Date(playback.expiresAt).toLocaleTimeString(

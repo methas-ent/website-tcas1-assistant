@@ -68,7 +68,11 @@ export default async function WatchPage({ params }: WatchPageProps) {
             </p>
           </div>
 
-          <VideoPlayer lessonId={context.lesson.id} title={context.lesson.title} />
+          <VideoPlayer
+            lessonId={context.lesson.id}
+            title={context.lesson.title}
+            userLabel={`ADMIN · ${access.user.email}`}
+          />
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
             {context.previousLessonId ? (

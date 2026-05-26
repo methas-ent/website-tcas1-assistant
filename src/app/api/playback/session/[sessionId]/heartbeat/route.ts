@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { getCurrentUserFromRequest } from "@/lib/auth";
 import { touchPlaybackSession } from "@/lib/playback-session";
 
 export const runtime = "nodejs";
@@ -10,10 +11,11 @@ type PlaybackHeartbeatRouteProps = {
 };
 
 export async function POST(
-  _request: Request,
+  request: NextRequest,
   { params }: PlaybackHeartbeatRouteProps,
 ) {
-  const result = await touchPlaybackSession(params.sessionId);
+  const user = await getCurrentUserFromRequest(request);
+  const result = await touchPlaybackSession(params.sessionId, user);
 
   if (!result.ok) {
     return NextResponse.json(

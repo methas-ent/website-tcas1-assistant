@@ -148,6 +148,27 @@ export default async function AdminOrdersPage({
               ),
             },
             {
+              key: "payment-slip",
+              header: "สลิป",
+              cell: (order) => (
+                <div className="grid gap-1">
+                  <Badge
+                    variant={order.paymentSlipUploadedAt ? "success" : "warning"}
+                  >
+                    {order.paymentSlipUploadedAt ? "มีสลิป" : "ยังไม่มี"}
+                  </Badge>
+                  {order.paymentSlipUploadedAt ? (
+                    <Link
+                      className="text-xs font-bold text-primary-700 hover:text-primary-600"
+                      href={`/admin/orders/${order.id}`}
+                    >
+                      ตรวจสอบ
+                    </Link>
+                  ) : null}
+                </div>
+              ),
+            },
+            {
               key: "total",
               header: "ยอดรวม",
               align: "right",

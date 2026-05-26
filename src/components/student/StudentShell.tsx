@@ -1,7 +1,7 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/components/ui/cn";
 import { Button } from "@/components/ui/Button";
+import { StudentShellNav } from "@/components/student/StudentShellNav";
 import { logoutAction } from "@/lib/auth-actions";
 
 export type StudentShellNavItem = {
@@ -40,7 +40,7 @@ export function StudentShell({
         ข้ามไปยังเนื้อหา
       </a>
       <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-page py-4">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-page py-4 pr-36 sm:pr-44">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
               Student
@@ -59,25 +59,7 @@ export function StudentShell({
       </header>
       <div className="mx-auto grid max-w-7xl gap-5 px-page py-5 sm:py-6 lg:grid-cols-[240px_1fr]">
         <aside className="lg:sticky lg:top-6 lg:self-start">
-          <nav
-            className="flex gap-2 overflow-x-auto rounded-2xl border border-line bg-surface p-2 shadow-sm scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] lg:grid lg:overflow-visible [&::-webkit-scrollbar]:hidden"
-            aria-label="เมนูนักเรียน"
-          >
-            {navItems.map((item) => (
-              <Link
-                key={`${item.href}-${item.label}`}
-                href={item.href}
-                className={cn(
-                  "shrink-0 whitespace-nowrap rounded-xl px-4 py-3 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300",
-                  item.active
-                    ? "bg-primary text-white shadow-sm"
-                    : "text-ink-muted hover:bg-surface-muted hover:text-ink",
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+          <StudentShellNav navItems={navItems} />
         </aside>
         <main id="student-main" className="min-w-0">
           {children}

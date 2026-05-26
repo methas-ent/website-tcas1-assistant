@@ -42,6 +42,7 @@ export async function getAdminDashboard() {
     totalOrders,
     paidOrders,
     pendingOrders,
+    pendingSlipReviews,
     totalStudents,
     totalCourses,
     totalPackages,
@@ -51,6 +52,12 @@ export async function getAdminDashboard() {
     prisma.order.count({ where: { status: "PAID" } }),
     prisma.order.count({
       where: { status: { in: ["PENDING_PAYMENT", "PENDING_REVIEW"] } },
+    }),
+    prisma.order.count({
+      where: {
+        status: "PENDING_REVIEW",
+        paymentSlipStorageKey: { not: null },
+      },
     }),
     prisma.user.count({ where: { role: "STUDENT" } }),
     prisma.course.count(),
@@ -78,6 +85,7 @@ export async function getAdminDashboard() {
     totalOrders,
     paidOrders,
     pendingOrders,
+    pendingSlipReviews,
     totalStudents,
     totalCourses,
     totalPackages,

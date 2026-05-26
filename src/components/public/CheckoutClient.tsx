@@ -53,32 +53,41 @@ export function CheckoutClient({
   async function submitCheckout(formData: FormData) {
     setState({ status: "submitting" });
 
+    const checkoutForm = new FormData();
+
+    cartPackages.forEach((coursePackage) => {
+      checkoutForm.append("packageIds", coursePackage.id);
+    });
+    checkoutForm.append("customerPhone", String(formData.get("customerPhone") ?? ""));
+    checkoutForm.append("note", String(formData.get("note") ?? ""));
+
+    const paymentSlip = formData.get("paymentSlip");
+
+    if (paymentSlip instanceof File) {
+      checkoutForm.append("paymentSlip", paymentSlip);
+    }
+
     const response = await fetch("/api/checkout", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        packageIds: cartPackages.map((coursePackage) => coursePackage.id),
-        customerPhone: String(formData.get("customerPhone") ?? ""),
-        note: String(formData.get("note") ?? ""),
-      }),
+      body: checkoutForm,
     });
 
-    const payload = (await response.json()) as {
+    const result = (await response.json()) as {
       error?: string;
       orderId?: string;
     };
 
-    if (!response.ok || !payload.orderId) {
+    if (!response.ok || !result.orderId) {
       setState({
         status: "error",
-        message: payload.error ?? "สร้างคำสั่งซื้อไม่สำเร็จ",
+        message: result.error ?? "สร้างคำสั่งซื้อไม่สำเร็จ",
       });
       return;
     }
 
     clearCartPackages();
     setCartIds([]);
-    setState({ status: "success", orderId: payload.orderId });
+    setState({ status: "success", orderId: result.orderId });
   }
 
   if (state.status === "success") {
@@ -89,8 +98,8 @@ export function CheckoutClient({
           รอผู้ดูแลตรวจสอบการชำระเงิน
         </h1>
         <p className="mt-3 text-sm leading-6 text-ink-muted">
-          เลขคำสั่งซื้อ {state.orderId} ถูกบันทึกในระบบแล้ว เมื่อผู้ดูแลยืนยันสถานะเป็นชำระเงินแล้ว
-          ระบบจะเปิดสิทธิ์คอร์สให้ในบัญชีนักเรียน
+          เลขคำสั่งซื้อ {state.orderId} พร้อมสลิปโอนเงินถูกบันทึกในระบบแล้ว
+          เมื่อผู้ดูแลตรวจสอบและยืนยันสถานะเป็นชำระเงินแล้ว ระบบจะเปิดสิทธิ์คอร์สให้ในบัญชีนักเรียน
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <ButtonLink href="/courses" variant="outline">
@@ -140,6 +149,30 @@ export function CheckoutClient({
               placeholder="แจ้งรายละเอียดการโอน หรือคำถามเพิ่มเติม"
             />
           </div>
+        </Card>
+
+        <Card>
+          <h2 className="font-heading text-xl font-bold text-ink">
+            สลิปโอนเงิน
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-ink-muted">
+            แนบหลักฐานการโอนเงินเพื่อให้ผู้ดูแลตรวจสอบและเปิดสิทธิ์เข้าเรียน
+          </p>
+          <label className="mt-5 grid gap-1.5">
+            <span className="text-sm font-bold text-ink-soft">
+              แนบ Slip โอนเงิน
+            </span>
+            <input
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              className="w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink shadow-sm transition file:mr-4 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-bold file:text-white hover:border-primary-200 focus:border-primary-300 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              name="paymentSlip"
+              required
+              type="file"
+            />
+            <span className="text-xs text-ink-muted">
+              รองรับ JPG, PNG, WebP หรือ PDF ขนาดไม่เกิน 10MB
+            </span>
+          </label>
         </Card>
 
         {state.status === "error" ? (

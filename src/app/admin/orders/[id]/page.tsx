@@ -41,6 +41,21 @@ function formatDate(value: Date | null) {
   }).format(value);
 }
 
+function formatFileSize(value: number | null) {
+  if (!value || value <= 0) {
+    return "-";
+  }
+
+  const units = ["B", "KB", "MB"];
+  const exponent = Math.min(
+    Math.floor(Math.log(value) / Math.log(1024)),
+    units.length - 1,
+  );
+  const amount = value / 1024 ** exponent;
+
+  return `${amount.toFixed(amount >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
+}
+
 export default async function AdminOrderDetailPage({
   params,
 }: OrderDetailPageProps) {
@@ -56,6 +71,9 @@ export default async function AdminOrderDetailPage({
     order.enrollments.map((enrollment) => enrollment.courseId),
   );
   const canMutate = order.status !== "PAID" && order.status !== "CANCELLED";
+  const paymentSlipUrl = `/api/admin/orders/${order.id}/payment-slip`;
+  const paymentSlipIsImage =
+    order.paymentSlipMimeType?.startsWith("image/") ?? false;
 
   return (
     <AdminShell
@@ -236,6 +254,63 @@ export default async function AdminOrderDetailPage({
                 </form>
               </div>
             ) : null}
+          </Card>
+
+          <Card className="mt-6">
+            <h2 className="font-heading text-xl font-bold text-ink">
+              สลิปโอนเงิน
+            </h2>
+            {order.paymentSlipStorageKey ? (
+              <div className="mt-5 grid gap-4">
+                <dl className="grid gap-3 text-sm">
+                  <div>
+                    <dt className="font-bold text-ink">ชื่อไฟล์</dt>
+                    <dd className="mt-1 break-all text-ink-muted">
+                      {order.paymentSlipOriginalFileName ?? "-"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-bold text-ink">ขนาดไฟล์</dt>
+                    <dd className="mt-1 text-ink-muted">
+                      {formatFileSize(order.paymentSlipSizeBytes)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-bold text-ink">อัปโหลดเมื่อ</dt>
+                    <dd className="mt-1 text-ink-muted">
+                      {formatDate(order.paymentSlipUploadedAt)}
+                    </dd>
+                  </div>
+                </dl>
+
+                {paymentSlipIsImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    alt={`สลิปโอนเงินของคำสั่งซื้อ ${order.id}`}
+                    className="max-h-[420px] w-full rounded-card border border-line object-contain"
+                    src={paymentSlipUrl}
+                  />
+                ) : (
+                  <iframe
+                    className="h-[420px] w-full rounded-card border border-line bg-surface"
+                    src={paymentSlipUrl}
+                    title={`สลิปโอนเงินของคำสั่งซื้อ ${order.id}`}
+                  />
+                )}
+
+                <Link
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-line bg-surface px-4 text-sm font-bold text-ink hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700"
+                  href={paymentSlipUrl}
+                  target="_blank"
+                >
+                  เปิดสลิปเต็มหน้า
+                </Link>
+              </div>
+            ) : (
+              <p className="mt-3 rounded-card border border-dashed border-line p-4 text-sm text-ink-muted">
+                ยังไม่มีสลิปโอนเงินแนบมากับคำสั่งซื้อนี้
+              </p>
+            )}
           </Card>
         </aside>
       </div>

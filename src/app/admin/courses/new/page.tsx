@@ -53,7 +53,11 @@ export default async function NewCoursePage({
             {error}
           </p>
         ) : null}
-        <form action={createCourseAction} className="mt-6 grid gap-4">
+        <form
+          action={createCourseAction}
+          className="mt-6 grid gap-4"
+          encType="multipart/form-data"
+        >
           <Input label="ชื่อคอร์ส" name="title" required />
           <Input
             hint="ใช้ภาษาอังกฤษ ตัวเลข และขีดกลาง เช่น math-a-level"
@@ -80,7 +84,13 @@ export default async function NewCoursePage({
             </Select>
             <Input label="ระดับคอร์ส/Level" name="level" placeholder="เช่น Foundation" />
           </div>
-          <Input label="URL รูปปก" name="coverImageUrl" />
+          <Input
+            accept="image/png"
+            hint="รองรับเฉพาะไฟล์ PNG ไม่เกิน 5MB"
+            label="อัปโหลดรูปปก PNG"
+            name="coverImageFile"
+            type="file"
+          />
           <Select defaultValue="DRAFT" label="สถานะคอร์ส" name="status" required>
             <option value="DRAFT">Draft</option>
             <option value="READY">Ready</option>

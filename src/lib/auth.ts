@@ -43,7 +43,7 @@ export function normalizeText(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
 }
 
-export async function createSession(userId: string) {
+export async function createSessionRecord(userId: string) {
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000);
 
@@ -55,30 +55,45 @@ export async function createSession(userId: string) {
     },
   });
 
-  cookies().set(SESSION_COOKIE, token, {
+  return {
+    token,
+    expiresAt,
+    maxAgeSeconds: SESSION_MAX_AGE_SECONDS,
+  };
+}
+
+export async function createSession(userId: string) {
+  const session = await createSessionRecord(userId);
+
+  cookies().set(SESSION_COOKIE, session.token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
+    maxAge: session.maxAgeSeconds,
   });
+
+  return session;
 }
 
-export async function clearSession() {
-  const token = cookies().get(SESSION_COOKIE)?.value;
-
+export async function clearSessionToken(token: string | null | undefined) {
   if (token) {
     await prisma.session.deleteMany({
       where: { sessionTokenHash: hashToken(token) },
     });
   }
+}
 
+export async function clearSession() {
+  const token = cookies().get(SESSION_COOKIE)?.value;
+
+  await clearSessionToken(token);
   cookies().delete(SESSION_COOKIE);
 }
 
-export async function getCurrentUser(): Promise<CurrentUser | null> {
-  const token = cookies().get(SESSION_COOKIE)?.value;
-
+export async function getCurrentUserFromToken(
+  token: string | null | undefined,
+): Promise<CurrentUser | null> {
   if (!token) {
     return null;
   }
@@ -103,6 +118,38 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   }
 
   return session.user;
+}
+
+function parseCookieHeader(cookieHeader: string | null) {
+  if (!cookieHeader) {
+    return null;
+  }
+
+  const match = cookieHeader
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${SESSION_COOKIE}=`));
+
+  return match ? decodeURIComponent(match.slice(SESSION_COOKIE.length + 1)) : null;
+}
+
+export function getSessionTokenFromRequest(request: Request) {
+  const authorization = request.headers.get("authorization")?.trim() ?? "";
+  const [scheme, token] = authorization.split(/\s+/, 2);
+
+  if (scheme?.toLowerCase() === "bearer" && token) {
+    return token;
+  }
+
+  return parseCookieHeader(request.headers.get("cookie"));
+}
+
+export async function getCurrentUserFromRequest(request: Request) {
+  return getCurrentUserFromToken(getSessionTokenFromRequest(request));
+}
+
+export async function getCurrentUser(): Promise<CurrentUser | null> {
+  return getCurrentUserFromToken(cookies().get(SESSION_COOKIE)?.value);
 }
 
 export function isStudent(user: CurrentUser | null) {

@@ -38,14 +38,15 @@ export function getVideoUploadMaxBytes() {
 
 export function getVideoUploadErrorMessage(error?: string) {
   const messages: Record<string, string> = {
-    invalid: "กรุณาเลือกหมวดวิชา ระดับชั้น คอร์ส chapter lesson และไฟล์วิดีโอให้ครบ",
-    "invalid-selection": "หมวดวิชา ระดับชั้น คอร์ส chapter หรือ lesson ไม่ตรงกัน",
+    invalid: "กรุณาเลือกหมวดวิชา คอร์ส ชื่อวิดีโอ และไฟล์วิดีโอให้ครบ",
+    "invalid-selection": "หมวดวิชา คอร์ส chapter หรือ lesson ไม่ตรงกัน",
     type: "รองรับเฉพาะไฟล์วิดีโอสำหรับ development upload",
     size: "ไฟล์มีขนาดใหญ่เกินกว่าที่ตั้งค่าไว้",
     storage: "บันทึกไฟล์วิดีโอไม่สำเร็จ",
     "cannot-change-attached":
       "วิดีโอที่ผูกกับ lesson แล้วต้องคงสถานะ Ready เพื่อไม่ให้บทเรียนที่เปิดใช้งานเสีย",
     "cannot-delete-attached": "ลบวิดีโอไม่ได้ เพราะยังผูกกับ lesson ที่เปิดใช้งานอยู่",
+    "confirm-required": "กรุณากดยืนยันการลบวิดีโออีกครั้ง",
   };
 
   return error ? messages[error] ?? "อัปโหลดวิดีโอไม่สำเร็จ" : null;

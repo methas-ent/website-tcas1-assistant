@@ -23,6 +23,8 @@ const DEMO_USER_KEY = process.env.DEMO_USER_KEY?.trim() || "demo-user";
 const STATUS = {
   UPLOADED: "UPLOADED",
   ADMIN: "ADMIN",
+  STUDENT: "STUDENT",
+  ACTIVE: "ACTIVE",
 } as const;
 
 type LessonSeed = {
@@ -181,6 +183,55 @@ async function seedAdmin() {
   });
 
   console.log(`  admin: ${admin.email}`);
+}
+
+async function seedDemoStudent(courseIds: string[]) {
+  const email = process.env.DEMO_STUDENT_EMAIL?.trim().toLowerCase();
+  const password = process.env.DEMO_STUDENT_PASSWORD?.trim();
+
+  if (!email || !password) {
+    console.log("  demo student: skipped (set DEMO_STUDENT_EMAIL and DEMO_STUDENT_PASSWORD)");
+    return;
+  }
+
+  const name = process.env.DEMO_STUDENT_NAME?.trim() || "Demo Student";
+  const passwordHash = hashPassword(password);
+  const student = await prisma.user.upsert({
+    where: { email },
+    create: {
+      email,
+      name,
+      passwordHash,
+      role: STATUS.STUDENT,
+    },
+    update: {
+      name,
+      passwordHash,
+      role: STATUS.STUDENT,
+    },
+  });
+
+  for (const courseId of courseIds) {
+    await prisma.enrollment.upsert({
+      where: {
+        userId_courseId: {
+          userId: student.id,
+          courseId,
+        },
+      },
+      create: {
+        userId: student.id,
+        courseId,
+        status: STATUS.ACTIVE,
+      },
+      update: {
+        status: STATUS.ACTIVE,
+        expiresAt: null,
+      },
+    });
+  }
+
+  console.log(`  demo student: ${student.email} (${courseIds.length} enrollments)`);
 }
 
 async function seedCourse(courseSeed: CourseSeed) {
@@ -393,6 +444,7 @@ async function main() {
 
   await seedPackage(courses.map((course) => course.id));
   await seedDemoProgress(courses[0]!.id);
+  await seedDemoStudent(courses.map((course) => course.id));
 
   console.log("Seed complete.");
 }

@@ -37,6 +37,7 @@ export function AdminVideoUploadForm({
   const [courseId, setCourseId] = useState("");
   const [chapterId, setChapterId] = useState("");
   const [lessonId, setLessonId] = useState("");
+  const [fileFeedback, setFileFeedback] = useState("");
 
   const filteredCourses = useMemo(
     () =>
@@ -110,7 +111,7 @@ export function AdminVideoUploadForm({
         </Select>
 
         <Select
-          label="ระดับชั้น"
+          label="ระดับชั้น (ไม่บังคับ)"
           name="gradeLevel"
           onChange={(event) => {
             setGradeLevel(event.target.value);
@@ -118,10 +119,9 @@ export function AdminVideoUploadForm({
             setChapterId("");
             setLessonId("");
           }}
-          required
           value={gradeLevel}
         >
-          <option value="">เลือกระดับชั้น</option>
+          <option value="">ทุกระดับชั้น</option>
           {GRADE_LEVEL_OPTIONS.map((option) => (
             <option key={option} value={option}>
               {GRADE_LEVEL_LABELS[option]}
@@ -131,13 +131,13 @@ export function AdminVideoUploadForm({
       </div>
 
       <Select
-        disabled={!subjectCategory || !gradeLevel || filteredCourses.length === 0}
+        disabled={!subjectCategory || filteredCourses.length === 0}
         hint={
-          subjectCategory && gradeLevel
+          subjectCategory
             ? `${filteredCourses.length} คอร์สตรงกับตัวกรอง`
-            : "เลือกหมวดวิชาและระดับชั้นก่อน"
+            : "เลือกหมวดวิชาก่อน"
         }
-        label="คอร์ส"
+        label="ชื่อคอร์ส"
         name="courseId"
         onChange={(event) => {
           setCourseId(event.target.value);
@@ -150,23 +150,23 @@ export function AdminVideoUploadForm({
         <option value="">เลือกคอร์ส</option>
         {filteredCourses.map((course) => (
           <option key={course.id} value={course.id}>
-            {course.title} ({course.slug})
+            {course.title} - {GRADE_LEVEL_LABELS[courseGrade(course)]} ({course.slug})
           </option>
         ))}
       </Select>
 
       <Select
         disabled={!selectedCourse}
-        label="Chapter"
+        hint="ไม่บังคับ ถ้ายังไม่ต้องการผูกกับบทเรียนให้เว้นไว้"
+        label="Chapter (ไม่บังคับ)"
         name="chapterId"
         onChange={(event) => {
           setChapterId(event.target.value);
           setLessonId("");
         }}
-        required
         value={chapterId}
       >
-        <option value="">เลือก chapter</option>
+        <option value="">ยังไม่ผูก chapter</option>
         {selectedCourse?.chapters.map((chapter) => (
           <option key={chapter.id} value={chapter.id}>
             {chapter.sortOrder}. {chapter.title}
@@ -176,13 +176,13 @@ export function AdminVideoUploadForm({
 
       <Select
         disabled={!selectedChapter}
-        label="Lesson"
+        hint="ถ้าเลือก lesson ระบบจะ attach วิดีโอนี้ให้ lesson นั้นทันที"
+        label="Lesson (ไม่บังคับ)"
         name="lessonId"
         onChange={(event) => setLessonId(event.target.value)}
-        required
         value={lessonId}
       >
-        <option value="">เลือก lesson</option>
+        <option value="">ยังไม่ผูก lesson</option>
         {selectedChapter?.lessons.map((lesson) => (
           <option key={lesson.id} value={lesson.id}>
             {lesson.sortOrder}. {lesson.title}
@@ -200,19 +200,38 @@ export function AdminVideoUploadForm({
           accept="video/*"
           className="w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink shadow-sm"
           name="file"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+
+            if (!file) {
+              setFileFeedback("");
+              return;
+            }
+
+            const sizeMb = file.size / (1024 * 1024);
+            const typeLabel = file.type || "unknown type";
+            setFileFeedback(
+              `${file.name} · ${typeLabel} · ${sizeMb.toFixed(1)} MB`,
+            );
+          }}
           required
           type="file"
         />
         <span className="text-xs text-ink-muted">
           รองรับ MP4, WebM, MOV, M4V และ MPEG สำหรับ development เท่านั้น
         </span>
+        {fileFeedback ? (
+          <span className="rounded-card bg-primary-50 px-3 py-2 text-xs font-semibold text-primary-700">
+            ไฟล์ที่เลือก: {fileFeedback}
+          </span>
+        ) : null}
       </label>
 
       <p className="rounded-card bg-surface-soft px-4 py-3 text-xs font-semibold text-ink-muted">
-        หาก lesson นี้มีวิดีโอเดิมอยู่ ระบบจะ attach วิดีโอใหม่แทน metadata เดิมใน lesson นั้น
+        เลือกเพียงหมวดวิชาและคอร์สก็อัปโหลด VDO ได้ทันที หากเลือก lesson เพิ่ม ระบบจะ attach วิดีโอใหม่ให้ lesson นั้น
       </p>
 
-      <Button type="submit">อัปโหลดและผูกกับ lesson</Button>
+      <Button type="submit">อัปโหลด VDO</Button>
     </form>
   );
 }

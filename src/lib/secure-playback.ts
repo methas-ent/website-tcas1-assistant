@@ -51,6 +51,8 @@ export type PlaybackAccessResult =
 export type PlaybackTokenPayload = {
   aud: typeof PLAYBACK_AUDIENCE;
   sessionId: string;
+  userId: string;
+  lessonId: string;
   iat: number;
   exp: number;
   nonce: string;
@@ -106,12 +108,16 @@ function sign(encodedPayload: string) {
 
 export function createPlaybackToken(input: {
   sessionId: string;
+  userId: string;
+  lessonId: string;
 }) {
   const iat = nowSeconds();
   const exp = iat + getPlaybackTokenTtlSeconds();
   const payload: PlaybackTokenPayload = {
     aud: PLAYBACK_AUDIENCE,
     sessionId: input.sessionId,
+    userId: input.userId,
+    lessonId: input.lessonId,
     iat,
     exp,
     nonce: randomBytes(16).toString("base64url"),
@@ -150,6 +156,8 @@ export function verifyPlaybackToken(token: string): PlaybackTokenPayload | null 
     if (
       payload.aud !== PLAYBACK_AUDIENCE ||
       typeof payload.sessionId !== "string" ||
+      typeof payload.userId !== "string" ||
+      typeof payload.lessonId !== "string" ||
       typeof payload.exp !== "number" ||
       payload.exp <= nowSeconds()
     ) {
@@ -170,9 +178,10 @@ function hasReadyVideo(
 
 export async function authorizeLessonPlayback(
   lessonId: string,
-  options: { requireVideo?: boolean } = {},
+  options: { requireVideo?: boolean; user?: CurrentUser | null } = {},
 ): Promise<PlaybackAccessResult> {
-  const user = await getCurrentUser();
+  const user =
+    "user" in options ? options.user : await getCurrentUser();
 
   if (!user) {
     return { ok: false, status: 401, error: "UNAUTHENTICATED" };

@@ -3,6 +3,7 @@ import {
   createPlaybackToken,
   getPlaybackErrorMessage,
 } from "@/lib/secure-playback";
+import type { CurrentUser } from "@/lib/auth";
 import prisma from "@/lib/db";
 
 type SessionAccessFailure = {
@@ -28,6 +29,7 @@ export type PlaybackSessionAccess = SessionAccessFailure | SessionAccessSuccess;
 
 export async function authorizePlaybackSession(
   sessionId: string,
+  user?: CurrentUser | null,
 ): Promise<PlaybackSessionAccess> {
   const session = await prisma.playbackSession.findUnique({
     where: { id: sessionId },
@@ -51,6 +53,7 @@ export async function authorizePlaybackSession(
 
   const access = await authorizeLessonPlayback(session.lessonId, {
     requireVideo: true,
+    ...(user !== undefined ? { user } : {}),
   });
 
   if (!access.ok) {
@@ -78,8 +81,11 @@ export async function authorizePlaybackSession(
   };
 }
 
-export async function issuePlaybackTokenForSession(sessionId: string) {
-  const result = await authorizePlaybackSession(sessionId);
+export async function issuePlaybackTokenForSession(
+  sessionId: string,
+  user?: CurrentUser | null,
+) {
+  const result = await authorizePlaybackSession(sessionId, user);
 
   if (!result.ok) {
     return result;
@@ -96,7 +102,11 @@ export async function issuePlaybackTokenForSession(sessionId: string) {
     } as const;
   }
 
-  const { token, expiresAt } = createPlaybackToken({ sessionId });
+  const { token, expiresAt } = createPlaybackToken({
+    sessionId,
+    userId: result.session.userId!,
+    lessonId: result.session.lessonId,
+  });
 
   return {
     ok: true,
@@ -108,8 +118,11 @@ export async function issuePlaybackTokenForSession(sessionId: string) {
   } as const;
 }
 
-export async function touchPlaybackSession(sessionId: string) {
-  const result = await authorizePlaybackSession(sessionId);
+export async function touchPlaybackSession(
+  sessionId: string,
+  user?: CurrentUser | null,
+) {
+  const result = await authorizePlaybackSession(sessionId, user);
 
   if (!result.ok) {
     return result;
@@ -123,8 +136,11 @@ export async function touchPlaybackSession(sessionId: string) {
   return { ok: true } as const;
 }
 
-export async function endPlaybackSession(sessionId: string) {
-  const result = await authorizePlaybackSession(sessionId);
+export async function endPlaybackSession(
+  sessionId: string,
+  user?: CurrentUser | null,
+) {
+  const result = await authorizePlaybackSession(sessionId, user);
 
   if (!result.ok) {
     return result;

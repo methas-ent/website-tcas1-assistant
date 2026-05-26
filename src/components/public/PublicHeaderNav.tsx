@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { MouseEvent } from "react";
+import { useAdminPreferences } from "@/components/admin/useAdminPreferences";
 import { cn } from "@/components/ui/cn";
+import { translateAdminText } from "@/lib/admin-translations";
 
 export type PublicNavItem = {
   href: string;
@@ -52,6 +54,7 @@ function isPrimaryClick(event: MouseEvent<HTMLAnchorElement>) {
 export function PublicHeaderNav({ navItems, className }: PublicHeaderNavProps) {
   const pathname = usePathname();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const { language } = useAdminPreferences();
 
   useEffect(() => {
     setPendingHref(null);
@@ -62,6 +65,8 @@ export function PublicHeaderNav({ navItems, className }: PublicHeaderNavProps) {
       {navItems.map((item) => {
         const isActive = isActivePath(pathname, item.href, item.active);
         const isPending = pendingHref === item.href && !isActive;
+        const label =
+          language === "en" ? translateAdminText(item.label) : item.label;
 
         return (
           <Link
@@ -84,7 +89,7 @@ export function PublicHeaderNav({ navItems, className }: PublicHeaderNavProps) {
                   : "text-ink-muted hover:bg-surface-muted hover:text-ink motion-safe:hover:-translate-y-0.5",
             )}
           >
-            {item.label}
+            {label}
           </Link>
         );
       })}

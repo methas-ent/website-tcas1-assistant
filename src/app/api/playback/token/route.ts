@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getCurrentUserFromRequest } from "@/lib/auth";
 import { issuePlaybackTokenForSession } from "@/lib/playback-session";
 
 export const runtime = "nodejs";
@@ -23,7 +24,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
   }
 
-  const result = await issuePlaybackTokenForSession(sessionId);
+  const user = await getCurrentUserFromRequest(request);
+  const result = await issuePlaybackTokenForSession(sessionId, user);
 
   if (!result.ok) {
     return NextResponse.json(

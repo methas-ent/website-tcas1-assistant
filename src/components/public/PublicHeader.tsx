@@ -81,7 +81,7 @@ export async function PublicHeader({
         className,
       )}
     >
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-page py-3 md:flex-nowrap md:gap-4">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-page py-3 pr-36 sm:pr-44 md:flex-nowrap md:gap-4">
         <Link
           href="/"
           className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl transition-transform duration-200 ease-out motion-safe:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 md:flex-none"

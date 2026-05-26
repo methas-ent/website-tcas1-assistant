@@ -4,6 +4,7 @@ import {
   createPlaybackToken,
   getPlaybackErrorMessage,
 } from "@/lib/secure-playback";
+import { getCurrentUserFromRequest } from "@/lib/auth";
 import prisma from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -28,7 +29,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing lessonId" }, { status: 400 });
   }
 
-  const access = await authorizeLessonPlayback(lessonId, { requireVideo: true });
+  const user = await getCurrentUserFromRequest(request);
+  const access = await authorizeLessonPlayback(lessonId, {
+    requireVideo: true,
+    user,
+  });
 
   if (!access.ok) {
     return NextResponse.json(
@@ -61,6 +66,8 @@ export async function POST(request: NextRequest) {
 
   const { token, expiresAt } = createPlaybackToken({
     sessionId: playbackSession.id,
+    userId: access.user.id,
+    lessonId: access.lesson.id,
   });
 
   return NextResponse.json({

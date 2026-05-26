@@ -41,10 +41,10 @@ export default async function AdminVideoUploadPage({
       <Card className="max-w-3xl">
         <p className="text-sm font-bold text-primary-700">Local dev upload</p>
         <h1 className="mt-2 font-heading text-2xl font-bold text-ink">
-          อัปโหลดไฟล์วิดีโอสำหรับ lesson
+          อัปโหลดไฟล์วิดีโอสำหรับคอร์ส
         </h1>
         <p className="mt-2 text-sm leading-6 text-ink-muted">
-          ไฟล์จะถูกเก็บใน local storage folder นอก source code และบันทึกเฉพาะ metadata กับ storage key ลงฐานข้อมูล
+          เลือกหมวดวิชาและคอร์สเพื่อเพิ่ม VDO เข้าคลังวิดีโอ จะผูกกับ lesson ตอนนี้หรือภายหลังก็ได้
         </p>
         <p className="mt-2 text-xs font-semibold text-ink-muted">
           จำกัดขนาดไฟล์ {formatBytes(getVideoUploadMaxBytes())}

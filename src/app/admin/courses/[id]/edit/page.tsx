@@ -110,7 +110,11 @@ export default async function EditCoursePage({
             </Badge>
           </div>
 
-          <form action={updateCourseAction} className="mt-6 grid gap-4">
+          <form
+            action={updateCourseAction}
+            className="mt-6 grid gap-4"
+            encType="multipart/form-data"
+          >
             <input name="courseId" type="hidden" value={course.id} />
             <Input defaultValue={course.title} label="ชื่อคอร์ส" name="title" required />
             <Input defaultValue={course.slug} label="Slug" name="slug" required />
@@ -150,10 +154,23 @@ export default async function EditCoursePage({
               </Select>
               <Input defaultValue={course.level} label="ระดับคอร์ส/Level" name="level" />
             </div>
+            {course.coverImageUrl ? (
+              <div className="grid gap-2">
+                <p className="text-sm font-bold text-ink-soft">รูปปกปัจจุบัน</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  alt={`รูปปกคอร์ส ${course.title}`}
+                  className="aspect-video w-full max-w-xl rounded-card border border-line bg-surface-soft object-cover"
+                  src={course.coverImageUrl}
+                />
+              </div>
+            ) : null}
             <Input
-              defaultValue={course.coverImageUrl ?? ""}
-              label="URL รูปปก"
-              name="coverImageUrl"
+              accept="image/png"
+              hint="เลือกไฟล์ใหม่เพื่อเปลี่ยนรูปปกเดิม รองรับเฉพาะ PNG ไม่เกิน 5MB"
+              label="อัปโหลดรูปปก PNG"
+              name="coverImageFile"
+              type="file"
             />
             <Select
               defaultValue={course.isPublished ? "READY" : "DRAFT"}

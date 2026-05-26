@@ -90,7 +90,11 @@ export default async function StudentLessonPage({
             </div>
           </div>
 
-          <VideoPlayer lessonId={context.lesson.id} title={context.lesson.title} />
+          <VideoPlayer
+            lessonId={context.lesson.id}
+            title={context.lesson.title}
+            userLabel={`${user.name} · ${user.email}`}
+          />
 
           <Card className="mt-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

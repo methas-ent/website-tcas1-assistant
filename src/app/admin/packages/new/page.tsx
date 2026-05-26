@@ -36,12 +36,12 @@ export default async function NewPackagePage({
       navItems={[
         { href: "/admin", label: "แดชบอร์ด" },
         { href: "/admin/orders", label: "ออเดอร์" },
-        { href: "/admin/courses", label: "คอร์ส" },
-        { href: "/admin/packages", label: "แพ็กเกจ", active: true },
+        { href: "/admin/courses", label: "แพ็กเกจ/คอร์ส", active: true },
+        { href: "/admin/videos", label: "วิดีโอ" },
       ]}
       actions={
-        <ButtonLink href="/admin/packages" size="sm" variant="outline">
-          กลับรายการแพ็กเกจ
+        <ButtonLink href="/admin/courses" size="sm" variant="outline">
+          กลับแพ็กเกจ/คอร์ส
         </ButtonLink>
       }
     >
@@ -57,7 +57,11 @@ export default async function NewPackagePage({
             {error}
           </p>
         ) : null}
-        <form action={createPackageAction} className="mt-6 grid gap-4">
+        <form
+          action={createPackageAction}
+          className="mt-6 grid gap-4"
+          encType="multipart/form-data"
+        >
           <Input label="ชื่อแพ็กเกจ" name="title" required />
           <Input
             hint="ใช้ภาษาอังกฤษ ตัวเลข และขีดกลาง เช่น tcas-bundle"
@@ -70,7 +74,13 @@ export default async function NewPackagePage({
             <Input label="ราคา (บาท)" min="0" name="priceThb" required type="number" />
             <Input defaultValue="THB" label="สกุลเงิน" name="currency" required />
           </div>
-          <Input label="URL รูปปก" name="coverImageUrl" />
+          <Input
+            accept="image/png"
+            hint="รองรับเฉพาะไฟล์ PNG ไม่เกิน 5MB"
+            label="อัปโหลดรูปปก PNG"
+            name="coverImageFile"
+            type="file"
+          />
           <label className="flex items-center gap-3 text-sm font-bold text-ink">
             <input className="h-4 w-4" name="isPublished" type="checkbox" />
             เผยแพร่แพ็กเกจนี้
