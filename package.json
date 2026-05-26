@@ -2,12 +2,19 @@
   "name": "vdo-learning-platform",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/mobile",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "mobile:start": "npm run start -w @knowledge/mobile",
+    "mobile:typecheck": "npm run typecheck -w @knowledge/mobile",
+    "mobile:lint": "npm run lint -w @knowledge/mobile",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
@@ -18,7 +25,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
-    "next": "^14.2.18",
+    "next": "14.2.18",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -28,7 +35,7 @@
     "@types/react-dom": "^18.3.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
-    "eslint-config-next": "^14.2.18",
+    "eslint-config-next": "14.2.18",
     "postcss": "^8.4.49",
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.14",

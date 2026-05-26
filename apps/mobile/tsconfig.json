@@ -1,0 +1,34 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@/assets/*": [
+        "./assets/*"
+      ],
+      "@knowledge/shared": [
+        "../../packages/shared/src"
+      ],
+      "@knowledge/api-client": [
+        "../../packages/api-client/src"
+      ]
+    }
+  },
+  "include": [
+    "src/app/**/*.ts",
+    "src/app/**/*.tsx",
+    "src/components/learning-ui.tsx",
+    "src/components/protected-video-player.tsx",
+    "src/features/**/*.ts",
+    "src/features/**/*.tsx",
+    "src/config.ts",
+    "src/env.d.ts",
+    "../../packages/shared/src/**/*.ts",
+    "../../packages/api-client/src/**/*.ts",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ]
+}

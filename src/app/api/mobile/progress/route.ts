@@ -26,7 +26,11 @@ function clampProgressSeconds(value: unknown) {
   return Math.min(Math.floor(parsed), 24 * 60 * 60);
 }
 
-async function updateCourseProgress(userId: string, courseId: string) {
+async function updateCourseProgress(
+  userId: string,
+  courseId: string,
+  lastLessonId: string,
+) {
   const course = await prisma.course.findUnique({
     where: { id: courseId },
     select: {
@@ -63,9 +67,11 @@ async function updateCourseProgress(userId: string, courseId: string) {
       userKey: `student:${userId}`,
       courseId,
       percentComplete,
+      lastLessonId,
     },
     update: {
       percentComplete,
+      lastLessonId,
     },
   });
 }
@@ -144,7 +150,7 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  await updateCourseProgress(auth.user.id, lesson.courseId);
+  await updateCourseProgress(auth.user.id, lesson.courseId, lessonId);
 
   return NextResponse.json({
     progress: {
