@@ -19,5 +19,5 @@ export default function AdminPackagesPage({
 
   const query = params.toString();
 
-  redirect(`/admin/courses${query ? `?${query}` : ""}`);
+  redirect(`/admin/videos${query ? `?${query}` : ""}`);
 }

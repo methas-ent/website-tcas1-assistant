@@ -18,6 +18,58 @@ function segmentedButtonClass(active: boolean) {
   );
 }
 
+function themeButtonClass(active: boolean) {
+  return cn(
+    "grid h-8 w-8 place-items-center rounded-full transition duration-200 motion-reduce:transition-none",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
+    active
+      ? "bg-primary text-white shadow-sm"
+      : "text-ink-muted hover:bg-primary-50 hover:text-primary-700",
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2" />
+      <path d="M12 20v2" />
+      <path d="m4.93 4.93 1.41 1.41" />
+      <path d="m17.66 17.66 1.41 1.41" />
+      <path d="M2 12h2" />
+      <path d="M20 12h2" />
+      <path d="m6.34 17.66-1.41 1.41" />
+      <path d="m19.07 4.93-1.41 1.41" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M20.99 13.07A8 8 0 1 1 10.93 3.01 6 6 0 1 0 20.99 13.07Z" />
+    </svg>
+  );
+}
+
 export function AdminPreferenceControls() {
   const { language, theme } = useAdminPreferences();
 
@@ -33,53 +85,64 @@ export function AdminPreferenceControls() {
 
   return (
     <div
-      className="fixed right-3 top-3 z-[60] grid justify-items-end gap-2 text-xs text-ink-muted sm:right-4 sm:top-4"
+      className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-3 z-[60] max-w-[calc(100vw-1.5rem)] text-xs text-ink-muted lg:bottom-auto lg:right-4 lg:top-4"
       aria-label="Display preferences"
     >
       <div
-        aria-label="Language"
-        className="flex rounded-full border border-line bg-surface/95 p-1 shadow-card backdrop-blur"
+        className="flex items-center gap-1 rounded-full border border-line bg-surface/95 p-1 shadow-card backdrop-blur supports-[backdrop-filter]:bg-surface/85"
         role="group"
       >
-        <button
-          aria-pressed={language === "th"}
-          className={segmentedButtonClass(language === "th")}
-          onClick={() => updateLanguage("th")}
-          type="button"
+        <div
+          aria-label="Language"
+          className="flex items-center"
+          role="group"
         >
-          TH
-        </button>
-        <button
-          aria-pressed={language === "en"}
-          className={segmentedButtonClass(language === "en")}
-          onClick={() => updateLanguage("en")}
-          type="button"
-        >
-          ENG
-        </button>
-      </div>
+          <button
+            aria-pressed={language === "th"}
+            className={segmentedButtonClass(language === "th")}
+            onClick={() => updateLanguage("th")}
+            type="button"
+          >
+            TH
+          </button>
+          <button
+            aria-pressed={language === "en"}
+            className={segmentedButtonClass(language === "en")}
+            onClick={() => updateLanguage("en")}
+            type="button"
+          >
+            ENG
+          </button>
+        </div>
 
-      <div
-        aria-label="Theme"
-        className="flex rounded-full border border-line bg-surface/95 p-1 shadow-card backdrop-blur"
-        role="group"
-      >
-        <button
-          aria-pressed={theme === "light"}
-          className={segmentedButtonClass(theme === "light")}
-          onClick={() => updateTheme("light")}
-          type="button"
+        <span className="mx-1 h-5 w-px bg-line" aria-hidden="true" />
+
+        <div
+          aria-label="Theme"
+          className="flex items-center gap-1"
+          role="group"
         >
-          White
-        </button>
-        <button
-          aria-pressed={theme === "dark"}
-          className={segmentedButtonClass(theme === "dark")}
-          onClick={() => updateTheme("dark")}
-          type="button"
-        >
-          Black
-        </button>
+          <button
+            aria-label="White theme"
+            aria-pressed={theme === "light"}
+            className={themeButtonClass(theme === "light")}
+            onClick={() => updateTheme("light")}
+            title="White"
+            type="button"
+          >
+            <SunIcon />
+          </button>
+          <button
+            aria-label="Black theme"
+            aria-pressed={theme === "dark"}
+            className={themeButtonClass(theme === "dark")}
+            onClick={() => updateTheme("dark")}
+            title="Black"
+            type="button"
+          >
+            <MoonIcon />
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -4,10 +4,16 @@ export function getAdminCatalogErrorMessage(error?: string) {
   const messages: Record<string, string> = {
     "duplicate-course-slug": "Slug คอร์สนี้ถูกใช้แล้ว",
     "duplicate-package-slug": "Slug แพ็กเกจนี้ถูกใช้แล้ว",
-    "invalid-course": "กรุณากรอกชื่อ slug หมวดวิชา และระดับชั้นของคอร์สให้ถูกต้อง",
-    "invalid-package": "กรุณากรอกชื่อแพ็กเกจ slug หรือราคาแพ็กเกจให้ถูกต้อง",
+    "invalid-course":
+      "กรุณากรอกชื่อคอร์ส วิชา ระดับชั้น ครูผู้สอน ราคา คำอธิบาย รูปปก และ VDO ให้ถูกต้อง",
+    "invalid-package":
+      "กรุณากรอกชื่อแพ็กเกจ วิชา ระดับชั้น ครูผู้สอน ราคา เลขบท คำอธิบาย รูปปก และ VDO ให้ถูกต้อง",
     "invalid-cover-image": "กรุณาอัปโหลดรูปปกเป็นไฟล์ PNG ขนาดไม่เกินที่กำหนด",
-    "invalid-chapter": "กรุณากรอกชื่อ chapter และ sort order ให้ถูกต้อง",
+    "invalid-course-video": "กรุณาเลือกไฟล์ VDO สำหรับคอร์ส",
+    "invalid-course-video-type": "รองรับเฉพาะไฟล์วิดีโอ MP4, WebM, MOV, M4V หรือ MPEG",
+    "invalid-course-video-size": "ไฟล์ VDO มีขนาดใหญ่เกินกว่าที่ตั้งค่าไว้",
+    storage: "บันทึกไฟล์ VDO ไม่สำเร็จ",
+    "invalid-chapter": "กรุณาเลือกจำนวนบทให้ถูกต้อง",
     "invalid-lesson": "กรุณากรอกชื่อ lesson และ sort order ให้ถูกต้อง",
     "cannot-delete-course": "ลบคอร์สไม่ได้ เพราะยังอยู่ในแพ็กเกจหรือมี enrollment แล้ว",
     "cannot-delete-package": "ลบแพ็กเกจไม่ได้ เพราะมีออเดอร์อ้างอิงอยู่",
@@ -46,6 +52,7 @@ export async function getAdminCourseList(query?: string) {
             { category: { contains: search } },
             { subjectCategory: { contains: search } },
             { gradeLevel: { contains: search } },
+            { teacherName: { contains: search } },
             { level: { contains: search } },
           ],
         }

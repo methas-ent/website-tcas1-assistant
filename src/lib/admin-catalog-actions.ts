@@ -11,8 +11,11 @@ import {
   isSubjectCategory,
   normalizeGradeLevel,
   normalizeSubjectCategory,
+  normalizeTeacherName,
 } from "@/lib/course-taxonomy";
 import prisma from "@/lib/db";
+import { getVideoStorageProvider } from "@/lib/video-storage";
+import type { StoredVideoObject } from "@/lib/video-storage";
 
 function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -77,6 +80,233 @@ async function coverImageUrlFromUpload(
   }
 }
 
+function videoFileFromUpload(formData: FormData) {
+  return formFile(formData, "videoFile") ?? formFile(formData, "file");
+}
+
+function videoUploadErrorCode(error: unknown) {
+  const code = error instanceof Error ? error.message : "storage";
+
+  if (code === "invalid") {
+    return "invalid-course-video";
+  }
+
+  if (code === "type") {
+    return "invalid-course-video-type";
+  }
+
+  if (code === "size") {
+    return "invalid-course-video-size";
+  }
+
+  return "storage";
+}
+
+async function videoFromUpload(
+  formData: FormData,
+  redirectPath: string,
+  required: boolean,
+) {
+  const file = videoFileFromUpload(formData);
+
+  if (!file || file.size <= 0) {
+    if (required) {
+      validationRedirect(redirectPath, "invalid-course-video");
+    }
+
+    return null;
+  }
+
+  try {
+    return await getVideoStorageProvider().saveVideo(file);
+  } catch (error) {
+    validationRedirect(redirectPath, videoUploadErrorCode(error));
+  }
+}
+
+function uniqueChapterDrafts(
+  chapters: Array<{ title: string; description: string | null; sortOrder: number }>,
+) {
+  const usedSlugs = new Set<string>();
+
+  return chapters.map((chapter) => {
+    const base = slugify(chapter.title) || `chapter-${chapter.sortOrder}`;
+    let slug = base;
+    let suffix = 2;
+
+    while (usedSlugs.has(slug)) {
+      slug = `${base}-${suffix}`;
+      suffix += 1;
+    }
+
+    usedSlugs.add(slug);
+    return { ...chapter, slug };
+  });
+}
+
+async function courseCreateSlug(
+  formData: FormData,
+  title: string,
+  redirectPath: string,
+) {
+  const explicitSlug = slugify(text(formData, "slug"));
+
+  if (!explicitSlug) {
+    return uniqueCourseSlugFromTitle(title);
+  }
+
+  if (!isValidSlug(explicitSlug)) {
+    validationRedirect(redirectPath, "invalid-course");
+  }
+
+  if (!(await ensureUniqueCourseSlug(explicitSlug))) {
+    validationRedirect(redirectPath, "duplicate-course-slug");
+  }
+
+  return explicitSlug;
+}
+
+async function createCourseWithVideo(
+  formData: FormData,
+  redirectPath: string,
+) {
+  const title = text(formData, "title") || text(formData, "videoTitle");
+  const description = text(formData, "description");
+  const rawSubjectCategory = text(formData, "subjectCategory");
+  const rawGradeLevel = text(formData, "gradeLevel");
+  const subjectCategory = normalizeSubjectCategory(rawSubjectCategory);
+  const gradeLevel = normalizeGradeLevel(rawGradeLevel);
+  const teacherName = normalizeTeacherName(text(formData, "teacherName"));
+  const cents = priceCents(formData, "priceThb");
+  const currency = packageCurrency(formData);
+
+  if (
+    !title ||
+    !isSubjectCategory(rawSubjectCategory) ||
+    !isGradeLevel(rawGradeLevel) ||
+    cents < 0 ||
+    !currency
+  ) {
+    validationRedirect(redirectPath, "invalid-course");
+  }
+
+  const storedVideo = await videoFromUpload(formData, redirectPath, true);
+  const slug = await courseCreateSlug(formData, title, redirectPath);
+  const shouldPublish = readyStatus(formData);
+
+  const created = await prisma.$transaction(async (tx) => {
+    const course = await tx.course.create({
+      data: {
+        title,
+        slug,
+        subtitle: "",
+        description,
+        category: subjectCategory,
+        subjectCategory,
+        gradeLevel,
+        teacherName,
+        level: gradeLevel,
+        priceCents: cents,
+        currency,
+        isPublished: shouldPublish,
+        courseCode: slug.toUpperCase(),
+        subject: subjectCategory || "คอร์สออนไลน์",
+      },
+      select: { id: true, title: true },
+    });
+
+    const chapter = await tx.chapter.create({
+      data: {
+        courseId: course.id,
+        title: "Chapter 1",
+        slug: "chapter-1",
+        description: null,
+        sortOrder: 1,
+        isPublished: shouldPublish,
+      },
+      select: { id: true, title: true },
+    });
+
+    const videoAsset = await tx.videoAsset.create({
+      data: videoAssetCreateData({
+        storedVideo: storedVideo!,
+        title,
+        description,
+        courseId: course.id,
+        courseTitle: course.title,
+        chapterId: chapter.id,
+        chapterTitle: chapter.title,
+        subjectCategory,
+        gradeLevel,
+      }),
+      select: { id: true },
+    });
+
+    await tx.lesson.create({
+      data: {
+        courseId: course.id,
+        chapterId: chapter.id,
+        title,
+        description,
+        sortOrder: 1,
+        epNumber: 1,
+        videoAssetId: videoAsset.id,
+        isPreview: false,
+        isPublished: shouldPublish,
+      },
+    });
+
+    return course;
+  });
+
+  return created;
+}
+
+function videoAssetCreateData({
+  storedVideo,
+  title,
+  description,
+  courseId,
+  courseTitle,
+  chapterId,
+  chapterTitle,
+  subjectCategory,
+  gradeLevel,
+}: {
+  storedVideo: StoredVideoObject;
+  title: string;
+  description: string;
+  courseId: string;
+  courseTitle: string;
+  chapterId: string | null;
+  chapterTitle: string | null;
+  subjectCategory: string;
+  gradeLevel: string;
+}) {
+  return {
+    title,
+    storageProvider: storedVideo.storageProvider,
+    storageKey: storedVideo.storageKey,
+    originalFileName: storedVideo.originalFileName,
+    mimeType: storedVideo.mimeType,
+    sizeBytes: storedVideo.sizeBytes,
+    status: "READY",
+    metadataJson: JSON.stringify({
+      description,
+      attachedCourseId: courseId,
+      attachedCourseTitle: courseTitle,
+      attachedChapterId: chapterId,
+      attachedChapterTitle: chapterTitle,
+      selectedCourseId: courseId,
+      selectedCourseTitle: courseTitle,
+      selectedChapterId: chapterId,
+      selectedChapterTitle: chapterTitle,
+      subjectCategory,
+      gradeLevel,
+    }),
+  };
+}
+
 async function ensureCourseExists(courseId: string) {
   const course = await prisma.course.findUnique({
     where: { id: courseId },
@@ -123,13 +353,45 @@ async function uniquePackageSlugFromTitle(title: string) {
 }
 
 function readyStatus(formData: FormData) {
-  const status = text(formData, "status").toUpperCase();
+  const status = (
+    text(formData, "submitStatus") ||
+    text(formData, "status")
+  ).toUpperCase();
 
   if (!status) {
     return bool(formData, "isPublished");
   }
 
   return ["READY", "PUBLISHED", "PUBLISH", "TRUE", "ON"].includes(status);
+}
+
+function publishStatus(formData: FormData) {
+  const status = (
+    text(formData, "submitStatus") ||
+    text(formData, "status")
+  ).toUpperCase();
+
+  return ["DRAFT", "PRIVATE", "PUBLISHED"].includes(status)
+    ? status
+    : "DRAFT";
+}
+
+async function requiredCoverImageUrlFromUpload(
+  formData: FormData,
+  redirectPath: string,
+) {
+  const file = formFile(formData, "coverImageFile");
+
+  if (!file || file.size <= 0) {
+    validationRedirect(redirectPath, "invalid-cover-image");
+  }
+
+  try {
+    const saved = await saveCoverImage(file);
+    return saved.publicUrl;
+  } catch {
+    validationRedirect(redirectPath, "invalid-cover-image");
+  }
 }
 
 function packageCurrency(formData: FormData) {
@@ -212,41 +474,352 @@ async function ensureValidLessonVideo(
 export async function quickCreateCourseAction(formData: FormData) {
   await requireAdmin("/admin/courses");
 
+  const course = await createCourseWithVideo(formData, "/admin/courses");
+
+  revalidatePath("/admin/courses");
+  revalidatePath("/courses");
+  redirect(`/admin/courses/${course.id}/edit?saved=course`);
+}
+
+export async function createStudioContentAction(formData: FormData) {
+  await requireAdmin("/admin/videos");
+
+  const redirectPath = "/admin/videos";
+  const itemType = text(formData, "itemType").toUpperCase();
   const title = text(formData, "title");
+  const lessonTitle = text(formData, "lessonTitle");
+  const videoTitle = lessonTitle || text(formData, "videoTitle") || title;
+  const description = text(formData, "description");
   const rawSubjectCategory = text(formData, "subjectCategory");
   const rawGradeLevel = text(formData, "gradeLevel");
   const subjectCategory = normalizeSubjectCategory(rawSubjectCategory);
   const gradeLevel = normalizeGradeLevel(rawGradeLevel);
+  const teacherName = normalizeTeacherName(text(formData, "teacherName"));
+  const cents = priceCents(formData, "priceThb");
+  const currency = packageCurrency(formData);
+  const chapterNumber = intValue(formData, "chapterNumber", 0);
+  const shouldPublish = readyStatus(formData);
+  const studioStatus = publishStatus(formData);
 
   if (
+    !["COURSE", "PACKAGE"].includes(itemType) ||
     !title ||
+    !videoTitle ||
+    !description ||
     !isSubjectCategory(rawSubjectCategory) ||
-    !isGradeLevel(rawGradeLevel)
+    !isGradeLevel(rawGradeLevel) ||
+    cents < 0 ||
+    !currency
+  ) {
+    validationRedirect(
+      redirectPath,
+      itemType === "PACKAGE" ? "invalid-package" : "invalid-course",
+    );
+  }
+
+  if (itemType === "PACKAGE" && chapterNumber < 1) {
+    validationRedirect(redirectPath, "invalid-chapter");
+  }
+
+  const [coverImageUrl, storedVideo] = await Promise.all([
+    requiredCoverImageUrlFromUpload(formData, redirectPath),
+    videoFromUpload(formData, redirectPath, true),
+  ]);
+
+  const courseSlug = await uniqueCourseSlugFromTitle(title);
+
+  if (itemType === "COURSE") {
+    const course = await prisma.$transaction(async (tx) => {
+      const createdCourse = await tx.course.create({
+        data: {
+          title,
+          slug: courseSlug,
+          subtitle: gradeLevel,
+          description,
+          category: subjectCategory,
+          subjectCategory,
+          gradeLevel,
+          teacherName,
+          level: gradeLevel,
+          priceCents: cents,
+          currency,
+          coverImageUrl,
+          isPublished: shouldPublish,
+          courseCode: courseSlug.toUpperCase(),
+          subject: subjectCategory || "คอร์สออนไลน์",
+        },
+        select: { id: true, title: true },
+      });
+
+      const chapter = await tx.chapter.create({
+        data: {
+          courseId: createdCourse.id,
+          title: "Chapter 1",
+          slug: "chapter-1",
+          description: null,
+          sortOrder: 1,
+          isPublished: shouldPublish,
+        },
+        select: { id: true, title: true },
+      });
+
+      const videoAsset = await tx.videoAsset.create({
+        data: videoAssetCreateData({
+          storedVideo: storedVideo!,
+          title: videoTitle,
+          description,
+          courseId: createdCourse.id,
+          courseTitle: createdCourse.title,
+          chapterId: chapter.id,
+          chapterTitle: chapter.title,
+          subjectCategory,
+          gradeLevel,
+        }),
+        select: { id: true },
+      });
+
+      await tx.lesson.create({
+        data: {
+          courseId: createdCourse.id,
+          chapterId: chapter.id,
+          title: videoTitle,
+          description,
+          sortOrder: 1,
+          epNumber: 1,
+          videoAssetId: videoAsset.id,
+          isPreview: false,
+          isPublished: shouldPublish,
+        },
+      });
+
+      return createdCourse;
+    });
+
+    revalidatePath("/admin/courses");
+    revalidatePath("/admin/videos");
+    revalidatePath("/courses");
+    redirect(
+      `/admin/courses/${course.id}/edit?saved=${studioStatus.toLowerCase()}`,
+    );
+  }
+
+  const [packageSlug, packageCourseSlug] = await Promise.all([
+    uniquePackageSlugFromTitle(title),
+    uniqueCourseSlugFromTitle(`${title} course`),
+  ]);
+
+  const created = await prisma.$transaction(async (tx) => {
+    const course = await tx.course.create({
+      data: {
+        title,
+        slug: packageCourseSlug,
+        subtitle: gradeLevel,
+        description,
+        category: subjectCategory,
+        subjectCategory,
+        gradeLevel,
+        teacherName,
+        level: gradeLevel,
+        priceCents: cents,
+        currency,
+        coverImageUrl,
+        isPublished: shouldPublish,
+        courseCode: packageCourseSlug.toUpperCase(),
+        subject: subjectCategory || "คอร์สออนไลน์",
+      },
+      select: { id: true, title: true },
+    });
+
+    const coursePackage = await tx.coursePackage.create({
+      data: {
+        title,
+        slug: packageSlug,
+        description,
+        priceCents: cents,
+        currency,
+        coverImageUrl,
+        isPublished: shouldPublish,
+        items: {
+          create: {
+            courseId: course.id,
+            sortOrder: 1,
+          },
+        },
+      },
+      select: { id: true },
+    });
+
+    const chapter = await tx.chapter.create({
+      data: {
+        courseId: course.id,
+        title: `Chapter ${chapterNumber}`,
+        slug: `chapter-${chapterNumber}`,
+        description,
+        sortOrder: chapterNumber,
+        isPublished: shouldPublish,
+      },
+      select: { id: true, title: true },
+    });
+
+    const videoAsset = await tx.videoAsset.create({
+      data: videoAssetCreateData({
+        storedVideo: storedVideo!,
+        title: videoTitle,
+        description,
+        courseId: course.id,
+        courseTitle: course.title,
+        chapterId: chapter.id,
+        chapterTitle: chapter.title,
+        subjectCategory,
+        gradeLevel,
+      }),
+      select: { id: true },
+    });
+
+    await tx.lesson.create({
+      data: {
+        courseId: course.id,
+        chapterId: chapter.id,
+        title: videoTitle,
+        description,
+        sortOrder: chapterNumber,
+        epNumber: chapterNumber,
+        videoAssetId: videoAsset.id,
+        isPreview: false,
+        isPublished: shouldPublish,
+      },
+    });
+
+    return { courseId: course.id, packageId: coursePackage.id };
+  });
+
+  revalidatePath("/admin/courses");
+  revalidatePath("/admin/packages");
+  revalidatePath("/admin/videos");
+  revalidatePath("/courses");
+  redirect(
+    `/admin/packages/${created.packageId}/edit?saved=${studioStatus.toLowerCase()}`,
+  );
+}
+
+export async function createCourseOrPackageAction(formData: FormData) {
+  await requireAdmin("/admin/courses");
+
+  const itemType = text(formData, "itemType").toUpperCase();
+  const title = text(formData, "title");
+  const rawGradeLevel = text(formData, "gradeLevel");
+  const gradeLevel = normalizeGradeLevel(rawGradeLevel);
+  const subjectCategory = normalizeSubjectCategory(title);
+  const teacherName = normalizeTeacherName(text(formData, "teacherName"));
+  const cents = priceCents(formData, "priceThb");
+  const currency = packageCurrency(formData);
+  const description = text(formData, "description");
+  const shouldPublish = readyStatus(formData);
+
+  if (
+    !["COURSE", "PACKAGE"].includes(itemType) ||
+    !title ||
+    !isGradeLevel(rawGradeLevel) ||
+    cents < 0 ||
+    !currency
   ) {
     validationRedirect("/admin/courses", "invalid-course");
   }
 
-  const slug = await uniqueCourseSlugFromTitle(title);
+  if (itemType === "COURSE") {
+    const slug = await uniqueCourseSlugFromTitle(title);
 
-  await prisma.course.create({
-    data: {
-      title,
-      slug,
-      subtitle: "",
-      description: "",
-      category: subjectCategory,
-      subjectCategory,
-      gradeLevel,
-      level: gradeLevel,
-      isPublished: readyStatus(formData),
-      courseCode: slug.toUpperCase(),
-      subject: subjectCategory || "คอร์สออนไลน์",
-    },
+    await prisma.course.create({
+      data: {
+        title,
+        slug,
+        subtitle: gradeLevel,
+        description,
+        category: subjectCategory,
+        subjectCategory,
+        gradeLevel,
+        teacherName,
+        level: gradeLevel,
+        priceCents: cents,
+        currency,
+        isPublished: shouldPublish,
+        courseCode: slug.toUpperCase(),
+        subject: title,
+      },
+    });
+
+    revalidatePath("/admin/courses");
+    revalidatePath("/courses");
+    redirect("/admin/courses?saved=course");
+  }
+
+  const chapterCount = intValue(formData, "chapterCount", 0);
+
+  if (chapterCount < 1 || chapterCount > 6) {
+    validationRedirect("/admin/courses", "invalid-chapter");
+  }
+
+  const [packageSlug, courseSlug] = await Promise.all([
+    uniquePackageSlugFromTitle(title),
+    uniqueCourseSlugFromTitle(title),
+  ]);
+
+  await prisma.$transaction(async (tx) => {
+    const course = await tx.course.create({
+      data: {
+        title,
+        slug: courseSlug,
+        subtitle: gradeLevel,
+        description,
+        category: subjectCategory,
+        subjectCategory,
+        gradeLevel,
+        teacherName,
+        level: gradeLevel,
+        priceCents: cents,
+        currency,
+        isPublished: shouldPublish,
+        courseCode: courseSlug.toUpperCase(),
+        subject: title,
+      },
+      select: { id: true },
+    });
+
+    await tx.coursePackage.create({
+      data: {
+        title,
+        slug: packageSlug,
+        description,
+        priceCents: cents,
+        currency,
+        isPublished: shouldPublish,
+        items: {
+          create: {
+            courseId: course.id,
+            sortOrder: 1,
+          },
+        },
+      },
+    });
+
+    for (let sortOrder = 1; sortOrder <= chapterCount; sortOrder += 1) {
+      await tx.chapter.create({
+        data: {
+          courseId: course.id,
+          title: `Chapter ${sortOrder}`,
+          slug: `chapter-${sortOrder}`,
+          description: null,
+          sortOrder,
+          isPublished: shouldPublish,
+        },
+      });
+    }
   });
 
   revalidatePath("/admin/courses");
+  revalidatePath("/admin/packages");
   revalidatePath("/courses");
-  redirect("/admin/courses?saved=course");
+  redirect("/admin/courses?saved=package");
 }
 
 export async function createPackageCourseBundleAction(formData: FormData) {
@@ -254,9 +827,25 @@ export async function createPackageCourseBundleAction(formData: FormData) {
 
   const packageTitle = text(formData, "packageTitle");
   const courseTitle = text(formData, "courseTitle") || packageTitle;
-  const chapterTitle = text(formData, "chapterTitle");
-  const chapterDescription = optionalText(formData, "chapterDescription");
-  const chapterSortOrder = intValue(formData, "chapterSortOrder", 1);
+  const packageDescription = optionalText(formData, "chapterDescription");
+  const chapterDrafts = uniqueChapterDrafts(
+    [1, 2, 3]
+      .map((sortOrder) => {
+        const title =
+          text(formData, `chapterTitle${sortOrder}`) ||
+          (sortOrder === 1 ? text(formData, "chapterTitle") : "");
+        const description =
+          optionalText(formData, `chapterDescription${sortOrder}`) ??
+          (sortOrder === 1 ? packageDescription : null);
+
+        return {
+          title,
+          description,
+          sortOrder,
+        };
+      })
+      .filter((chapter) => chapter.title),
+  );
   const rawSubjectCategory = text(formData, "subjectCategory");
   const rawGradeLevel = text(formData, "gradeLevel");
   const subjectCategory = normalizeSubjectCategory(rawSubjectCategory);
@@ -270,8 +859,7 @@ export async function createPackageCourseBundleAction(formData: FormData) {
     !isSubjectCategory(rawSubjectCategory) ||
     !isGradeLevel(rawGradeLevel) ||
     cents < 0 ||
-    !currency ||
-    chapterSortOrder < 0
+    !currency
   ) {
     validationRedirect("/admin/courses", "invalid-package");
   }
@@ -288,10 +876,11 @@ export async function createPackageCourseBundleAction(formData: FormData) {
         title: courseTitle,
         slug: courseSlug,
         subtitle: gradeLevel,
-        description: chapterDescription ?? "",
+        description: packageDescription ?? "",
         category: subjectCategory,
         subjectCategory,
         gradeLevel,
+        teacherName: normalizeTeacherName(text(formData, "teacherName")),
         level: gradeLevel,
         isPublished: shouldPublish,
         courseCode: courseSlug.toUpperCase(),
@@ -304,7 +893,7 @@ export async function createPackageCourseBundleAction(formData: FormData) {
         title: packageTitle,
         slug: packageSlug,
         description:
-          chapterDescription ??
+          packageDescription ??
           `แพ็กเกจ ${packageTitle} สำหรับคอร์ส ${courseTitle}`,
         priceCents: cents,
         currency,
@@ -318,14 +907,14 @@ export async function createPackageCourseBundleAction(formData: FormData) {
       },
     });
 
-    if (chapterTitle) {
+    for (const chapter of chapterDrafts) {
       await tx.chapter.create({
         data: {
           courseId: course.id,
-          title: chapterTitle,
-          slug: slugify(chapterTitle) || `chapter-${chapterSortOrder || 1}`,
-          description: chapterDescription,
-          sortOrder: chapterSortOrder,
+          title: chapter.title,
+          slug: chapter.slug,
+          description: chapter.description,
+          sortOrder: chapter.sortOrder,
           isPublished: shouldPublish,
         },
       });
@@ -344,63 +933,30 @@ export async function createPackageCourseBundleAction(formData: FormData) {
 export async function createCourseAction(formData: FormData) {
   await requireAdmin("/admin/courses/new");
 
-  const title = text(formData, "title");
-  const slug = slugify(text(formData, "slug"));
-  const rawSubjectCategory = text(formData, "subjectCategory");
-  const rawGradeLevel = text(formData, "gradeLevel");
-  const subjectCategory = normalizeSubjectCategory(rawSubjectCategory);
-  const gradeLevel = normalizeGradeLevel(rawGradeLevel);
-  const level = text(formData, "level") || gradeLevel;
-
-  if (
-    !title ||
-    !slug ||
-    !isValidSlug(slug) ||
-    !isSubjectCategory(rawSubjectCategory) ||
-    !isGradeLevel(rawGradeLevel)
-  ) {
-    validationRedirect("/admin/courses/new", "invalid-course");
-  }
-
-  if (!(await ensureUniqueCourseSlug(slug))) {
-    validationRedirect("/admin/courses/new", "duplicate-course-slug");
-  }
-
-  const course = await prisma.course.create({
-    data: {
-      title,
-      slug,
-      subtitle: text(formData, "subtitle"),
-      description: text(formData, "description"),
-      category: subjectCategory,
-      subjectCategory,
-      gradeLevel,
-      level,
-      coverImageUrl: await coverImageUrlFromUpload(
-        formData,
-        "/admin/courses/new",
-      ),
-      isPublished: readyStatus(formData),
-      courseCode: slug.toUpperCase(),
-      subject: subjectCategory || "คอร์สออนไลน์",
-    },
-  });
+  const course = await createCourseWithVideo(formData, "/admin/courses/new");
 
   revalidatePath("/admin/courses");
-  redirect(`/admin/courses/${course.id}/edit`);
+  revalidatePath("/courses");
+  redirect(`/admin/courses/${course.id}/edit?saved=course`);
 }
 
 export async function updateCourseAction(formData: FormData) {
   const courseId = text(formData, "courseId");
-  await requireAdmin(`/admin/courses/${courseId}/edit`);
+  const redirectPath = `/admin/courses/${courseId}/edit`;
+  await requireAdmin(redirectPath);
 
   const title = text(formData, "title");
   const slug = slugify(text(formData, "slug"));
+  const description = text(formData, "description");
   const rawSubjectCategory = text(formData, "subjectCategory");
   const rawGradeLevel = text(formData, "gradeLevel");
   const subjectCategory = normalizeSubjectCategory(rawSubjectCategory);
   const gradeLevel = normalizeGradeLevel(rawGradeLevel);
   const level = text(formData, "level") || gradeLevel;
+  const teacherName = normalizeTeacherName(text(formData, "teacherName"));
+  const cents = priceCents(formData, "priceThb");
+  const currency = packageCurrency(formData);
+  const shouldPublish = readyStatus(formData);
 
   if (
     !courseId ||
@@ -408,13 +964,15 @@ export async function updateCourseAction(formData: FormData) {
     !slug ||
     !isValidSlug(slug) ||
     !isSubjectCategory(rawSubjectCategory) ||
-    !isGradeLevel(rawGradeLevel)
+    !isGradeLevel(rawGradeLevel) ||
+    cents < 0 ||
+    !currency
   ) {
-    validationRedirect(`/admin/courses/${courseId}/edit`, "invalid-course");
+    validationRedirect(redirectPath, "invalid-course");
   }
 
   if (!(await ensureUniqueCourseSlug(slug, courseId))) {
-    validationRedirect(`/admin/courses/${courseId}/edit`, "duplicate-course-slug");
+    validationRedirect(redirectPath, "duplicate-course-slug");
   }
 
   const currentCourse = await prisma.course.findUnique({
@@ -423,28 +981,107 @@ export async function updateCourseAction(formData: FormData) {
   });
 
   if (!currentCourse) {
-    validationRedirect(`/admin/courses/${courseId}/edit`, "not-found");
+    validationRedirect(redirectPath, "not-found");
   }
 
-  await prisma.course.update({
-    where: { id: courseId },
-    data: {
-      title,
-      slug,
-      subtitle: text(formData, "subtitle"),
-      description: text(formData, "description"),
-      category: subjectCategory,
-      subjectCategory,
-      gradeLevel,
-      level,
-      coverImageUrl: await coverImageUrlFromUpload(
-        formData,
-        `/admin/courses/${courseId}/edit`,
-        currentCourse.coverImageUrl,
-      ),
-      isPublished: readyStatus(formData),
-      subject: subjectCategory || "คอร์สออนไลน์",
-    },
+  const [coverImageUrl, storedVideo] = await Promise.all([
+    coverImageUrlFromUpload(formData, redirectPath, currentCourse.coverImageUrl),
+    videoFromUpload(formData, redirectPath, false),
+  ]);
+
+  await prisma.$transaction(async (tx) => {
+    const updatedCourse = await tx.course.update({
+      where: { id: courseId },
+      data: {
+        title,
+        slug,
+        subtitle: text(formData, "subtitle"),
+        description,
+        category: subjectCategory,
+        subjectCategory,
+        gradeLevel,
+        teacherName,
+        level,
+        priceCents: cents,
+        currency,
+        coverImageUrl,
+        isPublished: shouldPublish,
+        subject: subjectCategory || "คอร์สออนไลน์",
+      },
+      select: { id: true, title: true },
+    });
+
+    if (!storedVideo) {
+      return;
+    }
+
+    let chapter = await tx.chapter.findFirst({
+      where: { courseId },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, title: true },
+    });
+
+    if (!chapter) {
+      chapter = await tx.chapter.create({
+        data: {
+          courseId,
+          title: "Chapter 1",
+          slug: "chapter-1",
+          description: null,
+          sortOrder: 1,
+          isPublished: shouldPublish,
+        },
+        select: { id: true, title: true },
+      });
+    }
+
+    const lesson = await tx.lesson.findFirst({
+      where: { courseId, chapterId: chapter.id },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true },
+    });
+
+    const videoAsset = await tx.videoAsset.create({
+      data: videoAssetCreateData({
+        storedVideo,
+        title,
+        description,
+        courseId,
+        courseTitle: updatedCourse.title,
+        chapterId: chapter.id,
+        chapterTitle: chapter.title,
+        subjectCategory,
+        gradeLevel,
+      }),
+      select: { id: true },
+    });
+
+    if (lesson) {
+      await tx.lesson.update({
+        where: { id: lesson.id },
+        data: {
+          title,
+          description,
+          videoAssetId: videoAsset.id,
+          isPublished: shouldPublish,
+        },
+      });
+      return;
+    }
+
+    await tx.lesson.create({
+      data: {
+        courseId,
+        chapterId: chapter.id,
+        title,
+        description,
+        sortOrder: 1,
+        epNumber: 1,
+        videoAssetId: videoAsset.id,
+        isPreview: false,
+        isPublished: shouldPublish,
+      },
+    });
   });
 
   revalidatePath("/admin/courses");
@@ -455,7 +1092,7 @@ export async function updateCourseAction(formData: FormData) {
 
 export async function quickUpdateCourseAction(formData: FormData) {
   const courseId = text(formData, "courseId");
-  await requireAdmin("/admin/courses");
+  await requireAdmin("/admin/videos");
 
   const title = text(formData, "title");
   const rawSubjectCategory = text(formData, "subjectCategory");
@@ -469,7 +1106,7 @@ export async function quickUpdateCourseAction(formData: FormData) {
     !isSubjectCategory(rawSubjectCategory) ||
     !isGradeLevel(rawGradeLevel)
   ) {
-    validationRedirect("/admin/courses", "invalid-course");
+    validationRedirect("/admin/videos", "invalid-course");
   }
 
   await prisma.course.update({
@@ -485,14 +1122,15 @@ export async function quickUpdateCourseAction(formData: FormData) {
     },
   });
 
+  revalidatePath("/admin/videos");
   revalidatePath("/admin/courses");
   revalidatePath("/courses");
-  redirect("/admin/courses?saved=course");
+  redirect("/admin/videos?saved=course");
 }
 
 export async function deleteCourseAction(formData: FormData) {
   const courseId = text(formData, "courseId");
-  await requireAdmin("/admin/courses");
+  await requireAdmin("/admin/videos");
 
   const course = courseId
     ? await prisma.course.findUnique({
@@ -510,7 +1148,7 @@ export async function deleteCourseAction(formData: FormData) {
     : null;
 
   if (!course) {
-    validationRedirect("/admin/courses", "not-found");
+    validationRedirect("/admin/videos", "not-found");
   }
 
   const courseToDelete = course!;
@@ -519,14 +1157,15 @@ export async function deleteCourseAction(formData: FormData) {
     courseToDelete._count.enrollments > 0 ||
     courseToDelete._count.packageItems > 0
   ) {
-    validationRedirect("/admin/courses", "cannot-delete-course");
+    validationRedirect("/admin/videos", "cannot-delete-course");
   }
 
   await prisma.course.delete({ where: { id: courseToDelete.id } });
 
+  revalidatePath("/admin/videos");
   revalidatePath("/admin/courses");
   revalidatePath("/courses");
-  redirect("/admin/courses?saved=deleted");
+  redirect("/admin/videos?saved=deleted");
 }
 
 export async function createChapterAction(formData: FormData) {
@@ -703,7 +1342,7 @@ export async function createPackageAction(formData: FormData) {
           formData,
           "/admin/packages/new",
         ),
-        isPublished: bool(formData, "isPublished"),
+        isPublished: readyStatus(formData),
       },
     });
 
@@ -718,14 +1357,14 @@ export async function createPackageAction(formData: FormData) {
 }
 
 export async function quickCreatePackageAction(formData: FormData) {
-  await requireAdmin("/admin/packages");
+  await requireAdmin("/admin/videos");
 
   const title = text(formData, "title");
   const cents = priceCents(formData, "priceThb");
   const currency = packageCurrency(formData);
 
   if (!title || cents < 0 || !currency) {
-    validationRedirect("/admin/packages", "invalid-package");
+    validationRedirect("/admin/videos", "invalid-package");
   }
 
   await prisma.coursePackage.create({
@@ -739,9 +1378,10 @@ export async function quickCreatePackageAction(formData: FormData) {
     },
   });
 
+  revalidatePath("/admin/videos");
   revalidatePath("/admin/packages");
   revalidatePath("/courses");
-  redirect("/admin/packages?saved=package");
+  redirect("/admin/videos?saved=package");
 }
 
 export async function updatePackageAction(formData: FormData) {
@@ -787,7 +1427,7 @@ export async function updatePackageAction(formData: FormData) {
           `/admin/packages/${packageId}/edit`,
           currentPackage.coverImageUrl,
         ),
-        isPublished: bool(formData, "isPublished"),
+        isPublished: readyStatus(formData),
       },
     });
 
@@ -802,14 +1442,14 @@ export async function updatePackageAction(formData: FormData) {
 
 export async function quickUpdatePackageAction(formData: FormData) {
   const packageId = text(formData, "packageId");
-  await requireAdmin("/admin/packages");
+  await requireAdmin("/admin/videos");
 
   const title = text(formData, "title");
   const cents = priceCents(formData, "priceThb");
   const currency = packageCurrency(formData);
 
   if (!packageId || !title || cents < 0 || !currency) {
-    validationRedirect("/admin/packages", "invalid-package");
+    validationRedirect("/admin/videos", "invalid-package");
   }
 
   await prisma.coursePackage.update({
@@ -822,14 +1462,15 @@ export async function quickUpdatePackageAction(formData: FormData) {
     },
   });
 
+  revalidatePath("/admin/videos");
   revalidatePath("/admin/packages");
   revalidatePath("/courses");
-  redirect("/admin/packages?saved=package");
+  redirect("/admin/videos?saved=package");
 }
 
 export async function deletePackageAction(formData: FormData) {
   const packageId = text(formData, "packageId");
-  await requireAdmin("/admin/packages");
+  await requireAdmin("/admin/videos");
 
   const coursePackage = packageId
     ? await prisma.coursePackage.findUnique({
@@ -846,20 +1487,21 @@ export async function deletePackageAction(formData: FormData) {
     : null;
 
   if (!coursePackage) {
-    validationRedirect("/admin/packages", "not-found");
+    validationRedirect("/admin/videos", "not-found");
   }
 
   const packageToDelete = coursePackage!;
 
   if (packageToDelete._count.orderItems > 0) {
-    validationRedirect("/admin/packages", "cannot-delete-package");
+    validationRedirect("/admin/videos", "cannot-delete-package");
   }
 
   await prisma.coursePackage.delete({ where: { id: packageToDelete.id } });
 
+  revalidatePath("/admin/videos");
   revalidatePath("/admin/packages");
   revalidatePath("/courses");
-  redirect("/admin/packages?saved=deleted");
+  redirect("/admin/videos?saved=deleted");
 }
 
 async function syncPackageCourses(

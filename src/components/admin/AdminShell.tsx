@@ -21,16 +21,21 @@ export type AdminShellProps = {
 const defaultNavItems: AdminShellNavItem[] = [
   { href: "/admin", label: "แดชบอร์ด" },
   { href: "/admin/orders", label: "ออเดอร์" },
-  { href: "/admin/courses", label: "แพ็กเกจ/คอร์ส" },
-  { href: "/admin/videos", label: "วิดีโอ" },
+  { href: "/admin/videos", label: "อัปโหลด VDO" },
 ];
 
+const studioRewriteHrefs = new Set([
+  "/admin/packages",
+  "/admin/courses",
+  "/admin/videos/upload",
+]);
+
 function normalizeNavItem(item: AdminShellNavItem): AdminShellNavItem {
-  if (item.href === "/admin/packages") {
+  if (studioRewriteHrefs.has(item.href)) {
     return {
       ...item,
-      href: "/admin/courses",
-      label: item.label === "แพ็กเกจ" ? "แพ็กเกจ/คอร์ส" : item.label,
+      href: "/admin/videos",
+      label: "อัปโหลด VDO",
     };
   }
 
@@ -100,7 +105,7 @@ export function AdminShell({
         </aside>
         <div className="min-w-0">
           <header className="border-b border-line bg-surface/95 backdrop-blur transition-colors duration-300 lg:sticky lg:top-0 lg:z-20">
-            <div className="flex flex-wrap items-center justify-between gap-4 px-page py-4 pr-36 sm:pr-44">
+            <div className="flex flex-wrap items-center justify-between gap-4 px-page py-4 lg:pr-44">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
                   Admin

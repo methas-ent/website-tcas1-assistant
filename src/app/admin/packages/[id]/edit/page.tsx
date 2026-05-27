@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import {
   formatThaiBahtFromCents,
@@ -145,15 +146,15 @@ export default async function EditPackagePage({
             name="coverImageFile"
             type="file"
           />
-          <label className="flex items-center gap-3 text-sm font-bold text-ink">
-            <input
-              className="h-4 w-4"
-              defaultChecked={coursePackage.isPublished}
-              name="isPublished"
-              type="checkbox"
-            />
-            เผยแพร่แพ็กเกจนี้
-          </label>
+          <Select
+            defaultValue={coursePackage.isPublished ? "PUBLISHED" : "DRAFT"}
+            label="สถานะแพ็กเกจ"
+            name="status"
+            required
+          >
+            <option value="DRAFT">Draft</option>
+            <option value="PUBLISHED">Published</option>
+          </Select>
 
           <section className="rounded-card border border-line bg-surface-soft p-4">
             <h2 className="font-heading text-lg font-bold text-ink">
@@ -162,6 +163,22 @@ export default async function EditPackagePage({
             <p className="mt-1 text-sm text-ink-muted">
               เลือกคอร์สที่รวมอยู่ในแพ็กเกจนี้ แล้วกดบันทึกได้ทุกครั้งที่ต้องการเพิ่ม/ลดคอร์ส
             </p>
+            {coursePackage.items.length ? (
+              <div className="mt-4 grid gap-2 rounded-card border border-primary-100 bg-primary-50 p-3">
+                {coursePackage.items.map((item, index) => (
+                  <div
+                    className="flex flex-wrap items-center gap-2 text-sm"
+                    key={item.courseId}
+                  >
+                    <Badge variant="primary">Chapter {index + 1}</Badge>
+                    <span className="font-bold text-ink">{item.course.title}</span>
+                    <span className="text-xs text-ink-muted">
+                      {item.course.isPublished ? "Published" : "Draft"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {courses.map((course) => (
                 <div
