@@ -1,17 +1,251 @@
 import type { PlaybackAuthorizeResponse } from "@knowledge/shared";
-import * as ScreenCapture from "expo-screen-capture";
 import { useVideoPlayer, VideoView, type VideoSource } from "expo-video";
-import { useEffect, useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Platform, StyleSheet, Text, View } from "react-native";
 
 import { useLearningTheme } from "@/components/learning-ui";
 import { useAuth } from "@/features/auth/auth-context";
 import { usePreferences } from "@/features/preferences/preferences-context";
+import { useSecureScreen } from "@/hooks/useSecureScreen";
 
 type ProtectedVideoPlayerProps = {
   playback: PlaybackAuthorizeResponse | null;
   lessonId: string;
 };
+
+const SCREEN_CAPTURE_KEY = "knowledge-lesson-player";
+const CAPTURE_WARNING_MS = 6_000;
+const WEB_SHORTCUT_SHIELD_MS = 2_500;
+
+type WebEventTargetLike = {
+  addEventListener?: (
+    type: string,
+    listener: (event: unknown) => void,
+    options?: unknown,
+  ) => void;
+  removeEventListener?: (
+    type: string,
+    listener: (event: unknown) => void,
+    options?: unknown,
+  ) => void;
+};
+
+type WebDocumentLike = WebEventTargetLike & {
+  hidden?: boolean;
+  visibilityState?: string;
+};
+
+type WebWindowLike = WebEventTargetLike & {
+  document?: WebDocumentLike;
+};
+
+type WebRuntimeLike = typeof globalThis & {
+  document?: WebDocumentLike;
+  window?: WebWindowLike;
+};
+
+type WebKeyboardEventLike = {
+  altKey?: boolean;
+  code?: string;
+  ctrlKey?: boolean;
+  key?: string;
+  metaKey?: boolean;
+  preventDefault?: () => void;
+  shiftKey?: boolean;
+};
+
+function getWebRuntime() {
+  return globalThis as WebRuntimeLike;
+}
+
+function getWebWindow() {
+  if (Platform.OS !== "web") {
+    return null;
+  }
+
+  return getWebRuntime().window ?? null;
+}
+
+function getWebDocument() {
+  if (Platform.OS !== "web") {
+    return null;
+  }
+
+  const runtime = getWebRuntime();
+  return runtime.document ?? runtime.window?.document ?? null;
+}
+
+function isDocumentHidden(documentLike: WebDocumentLike | null) {
+  return documentLike?.hidden === true || documentLike?.visibilityState === "hidden";
+}
+
+function addWebListener(
+  target: WebEventTargetLike | null,
+  type: string,
+  listener: (event: unknown) => void,
+  options?: unknown,
+) {
+  try {
+    target?.addEventListener?.(type, listener, options);
+  } catch {
+    // Browser and embedded WebView event support varies; this is deterrence only.
+  }
+
+  return () => {
+    try {
+      target?.removeEventListener?.(type, listener, options);
+    } catch {
+      // Ignore cleanup differences across web runtimes.
+    }
+  };
+}
+
+function isWebKeyboardEvent(event: unknown): event is WebKeyboardEventLike {
+  return typeof event === "object" && event !== null;
+}
+
+function isLikelyScreenCaptureShortcut(event: unknown) {
+  if (!isWebKeyboardEvent(event)) {
+    return false;
+  }
+
+  const key = event.key?.toLowerCase();
+  const code = event.code?.toLowerCase();
+
+  if (key === "printscreen" || key === "snapshot" || code === "printscreen") {
+    return true;
+  }
+
+  const isNumberCaptureKey = key === "3" || key === "4" || key === "5";
+  if (event.metaKey && event.shiftKey && isNumberCaptureKey) {
+    return true;
+  }
+
+  return Boolean(event.ctrlKey && event.shiftKey && key === "s");
+}
+
+function isLikelyPrintShortcut(event: unknown) {
+  if (!isWebKeyboardEvent(event)) {
+    return false;
+  }
+
+  return Boolean((event.ctrlKey || event.metaKey) && event.key?.toLowerCase() === "p");
+}
+
+function useWebPrivacyDeterrents(
+  enabled: boolean,
+  onWarning: () => void,
+  onShieldChange: (visible: boolean) => void,
+) {
+  useEffect(() => {
+    if (!enabled || Platform.OS !== "web") {
+      return;
+    }
+
+    const webWindow = getWebWindow();
+    const webDocument = getWebDocument();
+
+    if (!webWindow && !webDocument) {
+      return;
+    }
+
+    let windowBlurred = false;
+    let printing = false;
+    let shortcutShield = false;
+    let shortcutTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const updateShield = () => {
+      onShieldChange(
+        windowBlurred || printing || shortcutShield || isDocumentHidden(webDocument),
+      );
+    };
+
+    const showShortcutShield = () => {
+      shortcutShield = true;
+      updateShield();
+
+      if (shortcutTimer) {
+        clearTimeout(shortcutTimer);
+      }
+
+      shortcutTimer = setTimeout(() => {
+        shortcutShield = false;
+        shortcutTimer = null;
+        updateShield();
+      }, WEB_SHORTCUT_SHIELD_MS);
+    };
+
+    const handleBlur = () => {
+      windowBlurred = true;
+      updateShield();
+    };
+
+    const handleFocus = () => {
+      windowBlurred = false;
+      updateShield();
+    };
+
+    const handleVisibilityChange = () => {
+      if (isDocumentHidden(webDocument)) {
+        onWarning();
+      }
+      updateShield();
+    };
+
+    const handleBeforePrint = () => {
+      printing = true;
+      onWarning();
+      updateShield();
+    };
+
+    const handleAfterPrint = () => {
+      printing = false;
+      updateShield();
+    };
+
+    const handleKeyDown = (event: unknown) => {
+      if (!isLikelyScreenCaptureShortcut(event) && !isLikelyPrintShortcut(event)) {
+        return;
+      }
+
+      // Web shortcut handling is friction only; browsers cannot reliably block OS capture tools.
+      if (isWebKeyboardEvent(event)) {
+        try {
+          event.preventDefault?.();
+        } catch {
+          // Some synthetic/webview events do not allow cancellation.
+        }
+      }
+
+      onWarning();
+      showShortcutShield();
+    };
+
+    const removeListeners = [
+      addWebListener(webWindow, "blur", handleBlur),
+      addWebListener(webWindow, "focus", handleFocus),
+      addWebListener(webWindow, "beforeprint", handleBeforePrint),
+      addWebListener(webWindow, "afterprint", handleAfterPrint),
+      addWebListener(webDocument, "visibilitychange", handleVisibilityChange),
+      addWebListener(webWindow ?? webDocument, "keydown", handleKeyDown, {
+        capture: true,
+      }),
+    ];
+
+    updateShield();
+
+    return () => {
+      if (shortcutTimer) {
+        clearTimeout(shortcutTimer);
+      }
+
+      removeListeners.forEach((removeListener) => {
+        removeListener();
+      });
+      onShieldChange(false);
+    };
+  }, [enabled, onShieldChange, onWarning]);
+}
 
 export function ProtectedVideoPlayer({
   playback,
@@ -22,17 +256,56 @@ export function ProtectedVideoPlayer({
   const { palette, isDark } = useLearningTheme();
   const styles = createVideoStyles(palette, isDark);
   const [captureWarning, setCaptureWarning] = useState(false);
+  const [privacyShieldVisible, setPrivacyShieldVisible] = useState(false);
   const [playerError, setPlayerError] = useState<string | null>(null);
   const player = useVideoPlayer(null);
+  const captureWarningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showCaptureWarning = useCallback(() => {
+    if (captureWarningTimerRef.current) {
+      clearTimeout(captureWarningTimerRef.current);
+    }
 
-  ScreenCapture.usePreventScreenCapture("knowledge-lesson-player");
-  ScreenCapture.useScreenshotListener(() => {
     setCaptureWarning(true);
+
+    captureWarningTimerRef.current = setTimeout(() => {
+      setCaptureWarning(false);
+      captureWarningTimerRef.current = null;
+    }, CAPTURE_WARNING_MS);
+  }, []);
+  const setPrivacyShield = useCallback((visible: boolean) => {
+    setPrivacyShieldVisible(visible);
+  }, []);
+
+  useSecureScreen({
+    enableAppSwitcherShield: true,
+    onScreenshot: showCaptureWarning,
+    tag: SCREEN_CAPTURE_KEY,
   });
+  useWebPrivacyDeterrents(Boolean(playback), showCaptureWarning, setPrivacyShield);
+
+  useEffect(() => {
+    return () => {
+      if (captureWarningTimerRef.current) {
+        clearTimeout(captureWarningTimerRef.current);
+      }
+    };
+  }, []);
 
   const source = useMemo<VideoSource | null>(() => {
     if (!playback || !session) {
       return null;
+    }
+
+    if (Platform.OS === "web") {
+      return {
+        uri: api.resolveUrl(playback.playbackUrl),
+        contentType: "progressive",
+        metadata: {
+          title: playback.lessonTitle,
+          artist: "Knowledge Academy",
+        },
+        useCaching: false,
+      };
     }
 
     return {
@@ -110,6 +383,12 @@ export function ProtectedVideoPlayer({
       <View pointerEvents="none" style={styles.watermarkBottom}>
         <Text style={styles.watermarkText}>{new Date().toLocaleString(dateLocale)}</Text>
       </View>
+      {privacyShieldVisible ? (
+        <View pointerEvents="none" style={styles.privacyShield}>
+          <Text style={styles.privacyShieldTitle}>{t("privacyShieldTitle")}</Text>
+          <Text style={styles.privacyShieldText}>{t("privacyShieldDescription")}</Text>
+        </View>
+      ) : null}
       {captureWarning ? (
         <View style={styles.warning}>
           <Text style={styles.warningText}>{t("screenshotWarning")}</Text>
@@ -196,7 +475,35 @@ function createVideoStyles(
       fontFamily: "Prompt_600SemiBold",
       fontSize: 11,
     },
+    privacyShield: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      zIndex: 3,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(2, 6, 23, 0.92)",
+      padding: 18,
+      gap: 8,
+    },
+    privacyShieldTitle: {
+      color: "#ffffff",
+      fontFamily: "Prompt_800ExtraBold",
+      fontSize: 18,
+      textAlign: "center",
+    },
+    privacyShieldText: {
+      color: "#cbd5e1",
+      fontFamily: "Prompt_500Medium",
+      fontSize: 13,
+      lineHeight: 21,
+      maxWidth: 360,
+      textAlign: "center",
+    },
     warning: {
+      zIndex: 4,
       backgroundColor: isDark ? "#422006" : "#fef3c7",
       padding: 10,
     },

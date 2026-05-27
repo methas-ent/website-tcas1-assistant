@@ -14,9 +14,11 @@ import {
   SecondaryButton,
   useLearningTheme,
 } from "@/components/learning-ui";
+import { ProtectedContentNotice } from "@/components/ProtectedContentNotice";
 import { ProtectedVideoPlayer } from "@/components/protected-video-player";
 import { useAuth } from "@/features/auth/auth-context";
 import { usePreferences } from "@/features/preferences/preferences-context";
+import { goBackOrReplace } from "@/lib/navigation";
 
 export default function LessonScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
@@ -97,6 +99,18 @@ export default function LessonScreen() {
     setCompleteMessage(t("completeSaved"));
   };
 
+  const goBackToCourse = () => {
+    if (lessonContext?.course.id) {
+      goBackOrReplace({
+        pathname: "/courses/[courseId]",
+        params: { courseId: lessonContext.course.id },
+      });
+      return;
+    }
+
+    goBackOrReplace();
+  };
+
   if (loading) {
     return <LoadingState />;
   }
@@ -111,7 +125,7 @@ export default function LessonScreen() {
         <Header
           eyebrow="Lesson"
           title={t("accessDenied")}
-          action={<SecondaryButton title={t("back")} onPress={() => router.back()} />}
+          action={<SecondaryButton title={t("back")} onPress={goBackToCourse} />}
         />
         <EmptyState title={t("accessDenied")} description={error} />
       </Screen>
@@ -133,8 +147,9 @@ export default function LessonScreen() {
         <Header
           eyebrow={lessonContext.course.title}
           title={lessonContext.lesson.title}
-          action={<SecondaryButton title={t("back")} onPress={() => router.back()} />}
+          action={<SecondaryButton title={t("back")} onPress={goBackToCourse} />}
         />
+        <ProtectedContentNotice />
         <ProtectedVideoPlayer playback={playback} lessonId={normalizedLessonId} />
         <View style={styles.infoCard}>
           <Text style={styles.chapterTitle}>{lessonContext.chapter.title}</Text>

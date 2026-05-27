@@ -1,6 +1,6 @@
 import { ApiError } from "@knowledge/api-client";
 import type { MobileCourseDetail } from "@knowledge/shared";
-import { Redirect, router, useLocalSearchParams } from "expo-router";
+import { Redirect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
@@ -16,6 +16,7 @@ import {
 } from "@/components/learning-ui";
 import { useAuth } from "@/features/auth/auth-context";
 import { usePreferences } from "@/features/preferences/preferences-context";
+import { goBackOrReplace } from "@/lib/navigation";
 
 export default function CourseDetailScreen() {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
@@ -79,7 +80,7 @@ export default function CourseDetailScreen() {
         <Header
           eyebrow="Course"
           title={t("accessDenied")}
-          action={<SecondaryButton title={t("back")} onPress={() => router.back()} />}
+          action={<SecondaryButton title={t("back")} onPress={() => goBackOrReplace()} />}
         />
         <EmptyState title={t("accessDenied")} description={error} />
       </Screen>
@@ -96,7 +97,7 @@ export default function CourseDetailScreen() {
         <Header
           eyebrow={course.courseCode}
           title={course.title}
-          action={<SecondaryButton title={t("back")} onPress={() => router.back()} />}
+          action={<SecondaryButton title={t("back")} onPress={() => goBackOrReplace()} />}
         />
         <View style={styles.heroCard}>
           <Text style={styles.subject}>{course.subject}</Text>

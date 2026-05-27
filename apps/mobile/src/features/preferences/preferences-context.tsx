@@ -211,6 +211,14 @@ const translations = {
     th: "ตรวจพบการจับภาพหน้าจอ ระบบมี watermark ระบุตัวผู้เรียนแล้ว",
     en: "Screenshot detected. This player includes a user watermark",
   },
+  privacyShieldTitle: {
+    th: "ซ่อนวิดีโอชั่วคราว",
+    en: "Video hidden temporarily",
+  },
+  privacyShieldDescription: {
+    th: "ระบบซ่อนหน้าจอเมื่อแอปไม่อยู่หน้าแรกหรือมีคำสั่งพิมพ์ เป็นมาตรการลดความเสี่ยงเท่านั้น ไม่ใช่การป้องกันภาพหน้าจอหรือการอัดหน้าจอทั้งหมด",
+    en: "The player hides while the app is inactive or print is requested. This is best-effort deterrence, not complete screenshot or recording prevention",
+  },
 } satisfies Record<string, Record<Language, string>>;
 
 export type TranslationKey = keyof typeof translations;

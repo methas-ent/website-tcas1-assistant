@@ -5,7 +5,6 @@ import type {
 } from "@knowledge/shared";
 import { Image } from "expo-image";
 import { SymbolView } from "expo-symbols";
-import boldSymbolWeight from "expo-symbols/androidWeights/bold";
 import { router } from "expo-router";
 import { useEffect, useRef, type ReactNode } from "react";
 import {
@@ -136,14 +135,10 @@ function ThemeModeIcon({
   return (
     <SymbolView
       fallback={<Text style={{ color, fontFamily: font.extraBold, fontSize: 17 }}>{fallback}</Text>}
-      name={
-        mode === "dark"
-          ? { ios: "moon.stars.fill", android: "dark_mode", web: "dark_mode" }
-          : { ios: "sun.max.fill", android: "light_mode", web: "light_mode" }
-      }
+      name={mode === "dark" ? "moon.stars.fill" : "sun.max.fill"}
       size={18}
       tintColor={color}
-      weight={{ ios: "bold", android: boldSymbolWeight }}
+      weight="bold"
     />
   );
 }
