@@ -23,8 +23,21 @@ export const GRADE_LEVEL_OPTIONS = [
   "Other",
 ] as const;
 
+export const TEACHER_OPTIONS = [
+  "ทีมผู้สอน Knowledge Academy",
+  "ครูคณิตศาสตร์",
+  "ครูฟิสิกส์",
+  "ครูเคมี",
+  "ครูชีววิทยา",
+  "ครูภาษาอังกฤษ",
+  "ครูภาษาไทย",
+  "ครูสังคมศึกษา",
+  "ครูแนะแนว TCAS",
+] as const;
+
 export type SubjectCategory = (typeof SUBJECT_CATEGORY_OPTIONS)[number];
 export type GradeLevel = (typeof GRADE_LEVEL_OPTIONS)[number];
+export type TeacherName = (typeof TEACHER_OPTIONS)[number];
 
 export const SUBJECT_CATEGORY_LABELS: Record<SubjectCategory, string> = {
   Math: "คณิตศาสตร์ (Math)",
@@ -146,6 +159,14 @@ export function normalizeGradeLevel(
   }
 
   return gradeAliases[key(primary)] ?? gradeAliases[key(secondary)] ?? "Other";
+}
+
+export function normalizeTeacherName(value?: string | null): TeacherName {
+  const teacherName = String(value ?? "").trim();
+
+  return TEACHER_OPTIONS.includes(teacherName as TeacherName)
+    ? (teacherName as TeacherName)
+    : TEACHER_OPTIONS[0];
 }
 
 export function getSubjectCategoryLabel(
