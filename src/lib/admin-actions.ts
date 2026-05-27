@@ -73,9 +73,11 @@ export async function markOrderPaidAction(formData: FormData) {
       const snapshotCourseIds = parseCourseIdsSnapshot(
         orderItem.courseIdsSnapshotJson,
       );
-      const fallbackCourseIds = orderItem.coursePackage.items.map(
-        (item) => item.courseId,
-      );
+      const fallbackCourseIds = orderItem.coursePackage
+        ? orderItem.coursePackage.items.map((item) => item.courseId)
+        : orderItem.courseId
+          ? [orderItem.courseId]
+          : [];
       const courseIds = Array.from(
         new Set(snapshotCourseIds.length > 0 ? snapshotCourseIds : fallbackCourseIds),
       );

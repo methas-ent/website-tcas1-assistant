@@ -132,11 +132,13 @@ export default async function AdminOrderDetailPage({
                       </p>
                     </div>
                     <Badge variant="outline">
-                      {item.coursePackage.items.length} คอร์ส
+                      {item.coursePackage
+                        ? `${item.coursePackage.items.length} คอร์ส`
+                        : "คอร์สเดี่ยว"}
                     </Badge>
                   </div>
                   <div className="mt-4 grid gap-2">
-                    {item.coursePackage.items.map((packageCourse) => {
+                    {(item.coursePackage?.items ?? []).map((packageCourse) => {
                       const enrolled = enrollmentCourseIds.has(
                         packageCourse.course.id,
                       );

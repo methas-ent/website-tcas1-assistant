@@ -8,16 +8,18 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import {
-  clearCartPackages,
-  readCartPackageIds,
+  clearCartItems,
+  readCartItems,
+  type CartItem,
 } from "@/components/public/cart-storage";
 import { formatPrice } from "@/lib/formatters";
-import type { StorefrontPackage } from "@/lib/storefront";
+import type { StorefrontCourse, StorefrontPackage } from "@/lib/storefront";
 
 type CheckoutClientProps = {
   customerEmail: string;
   customerName: string;
   packages: StorefrontPackage[];
+  courses: StorefrontCourse[];
 };
 
 type CheckoutState =
@@ -26,37 +28,87 @@ type CheckoutState =
   | { status: "success"; orderId: string }
   | { status: "error"; message: string };
 
+type CheckoutLine =
+  | {
+      type: "package";
+      id: string;
+      title: string;
+      priceCents: number;
+      currency: string;
+      subtitle: string;
+    }
+  | {
+      type: "course";
+      id: string;
+      title: string;
+      priceCents: number;
+      currency: string;
+      subtitle: string;
+    };
+
 export function CheckoutClient({
   customerEmail,
   customerName,
   packages,
+  courses,
 }: CheckoutClientProps) {
-  const [cartIds, setCartIds] = useState<string[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [state, setState] = useState<CheckoutState>({ status: "idle" });
 
   useEffect(() => {
-    setCartIds(readCartPackageIds());
+    setCartItems(readCartItems());
   }, []);
 
-  const cartPackages = useMemo(() => {
-    const packageMap = new Map(packages.map((coursePackage) => [coursePackage.id, coursePackage]));
-    return cartIds
-      .map((id) => packageMap.get(id))
-      .filter((coursePackage): coursePackage is StorefrontPackage => Boolean(coursePackage));
-  }, [cartIds, packages]);
+  const cartLines = useMemo<CheckoutLine[]>(() => {
+    const packageMap = new Map(packages.map((entry) => [entry.id, entry]));
+    const courseMap = new Map(courses.map((entry) => [entry.id, entry]));
 
-  const totalCents = cartPackages.reduce(
-    (sum, coursePackage) => sum + coursePackage.priceCents,
-    0,
-  );
+    return cartItems
+      .map((item): CheckoutLine | null => {
+        if (item.type === "package") {
+          const pkg = packageMap.get(item.id);
+          if (!pkg) {
+            return null;
+          }
+          return {
+            type: "package",
+            id: pkg.id,
+            title: pkg.title,
+            priceCents: pkg.priceCents,
+            currency: pkg.currency,
+            subtitle: `${pkg.courseCount} คอร์ส`,
+          };
+        }
+        const course = courseMap.get(item.id);
+        if (!course) {
+          return null;
+        }
+        return {
+          type: "course",
+          id: course.id,
+          title: course.title,
+          priceCents: course.priceCents,
+          currency: course.currency,
+          subtitle: `${course.chapterCount} บท · ${course.lessonCount} บทเรียน`,
+        };
+      })
+      .filter((line): line is CheckoutLine => Boolean(line));
+  }, [cartItems, courses, packages]);
+
+  const totalCents = cartLines.reduce((sum, line) => sum + line.priceCents, 0);
+  const currency = cartLines[0]?.currency ?? "THB";
 
   async function submitCheckout(formData: FormData) {
     setState({ status: "submitting" });
 
     const checkoutForm = new FormData();
 
-    cartPackages.forEach((coursePackage) => {
-      checkoutForm.append("packageIds", coursePackage.id);
+    cartLines.forEach((line) => {
+      if (line.type === "package") {
+        checkoutForm.append("packageIds", line.id);
+      } else {
+        checkoutForm.append("courseIds", line.id);
+      }
     });
     checkoutForm.append("customerPhone", String(formData.get("customerPhone") ?? ""));
     checkoutForm.append("note", String(formData.get("note") ?? ""));
@@ -85,8 +137,8 @@ export function CheckoutClient({
       return;
     }
 
-    clearCartPackages();
-    setCartIds([]);
+    clearCartItems();
+    setCartItems([]);
     setState({ status: "success", orderId: result.orderId });
   }
 
@@ -111,12 +163,12 @@ export function CheckoutClient({
     );
   }
 
-  if (!cartPackages.length) {
+  if (!cartLines.length) {
     return (
       <EmptyState
         title="ไม่มีรายการสำหรับ checkout"
-        description="กลับไปเลือกแพ็กเกจคอร์สก่อนสร้างคำสั่งซื้อ"
-        action={<ButtonLink href="/courses">เลือกแพ็กเกจ</ButtonLink>}
+        description="กลับไปเลือกคอร์สหรือแพ็กเกจก่อนสร้างคำสั่งซื้อ"
+        action={<ButtonLink href="/courses">เลือกคอร์ส</ButtonLink>}
         tone="primary"
       />
     );
@@ -197,19 +249,20 @@ export function CheckoutClient({
         <Card>
           <h2 className="font-heading text-lg font-bold text-ink">สรุปรายการ</h2>
           <div className="mt-4 grid gap-3">
-            {cartPackages.map((coursePackage) => (
+            {cartLines.map((line) => (
               <div
                 className="grid gap-2 border-b border-line pb-3 last:border-0 last:pb-0 sm:flex sm:items-start sm:justify-between sm:gap-3"
-                key={coursePackage.id}
+                key={`${line.type}:${line.id}`}
               >
                 <div>
-                  <p className="font-bold text-ink">{coursePackage.title}</p>
-                  <p className="text-xs text-ink-muted">
-                    {coursePackage.courseCount} คอร์ส
+                  <p className="text-xs font-bold text-primary-700">
+                    {line.type === "package" ? "แพ็กเกจ" : "คอร์ส"}
                   </p>
+                  <p className="mt-1 font-bold text-ink">{line.title}</p>
+                  <p className="text-xs text-ink-muted">{line.subtitle}</p>
                 </div>
                 <p className="shrink-0 font-bold text-primary-700 sm:text-right">
-                  {formatPrice(coursePackage.priceCents, coursePackage.currency)}
+                  {formatPrice(line.priceCents, line.currency)}
                 </p>
               </div>
             ))}
@@ -217,7 +270,7 @@ export function CheckoutClient({
           <div className="mt-5 flex items-center justify-between border-t border-line pt-5">
             <span className="font-bold text-ink">ยอดรวม</span>
             <span className="font-heading text-2xl font-bold text-primary-700">
-              {formatPrice(totalCents)}
+              {formatPrice(totalCents, currency)}
             </span>
           </div>
         </Card>

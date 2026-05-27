@@ -2,8 +2,7 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { Readable } from "node:stream";
 import { NextResponse, type NextRequest } from "next/server";
-import { getCurrentUserFromRequest } from "@/lib/auth";
-import { authorizePlaybackSession } from "@/lib/playback-session";
+import { authorizePlaybackSessionToken } from "@/lib/playback-session";
 import { verifyPlaybackToken } from "@/lib/secure-playback";
 import { resolveLocalVideoPath } from "@/lib/video-storage";
 
@@ -85,8 +84,11 @@ export async function GET(
     return NextResponse.json({ error: "Invalid playback token" }, { status: 401 });
   }
 
-  const user = await getCurrentUserFromRequest(request);
-  const sessionAccess = await authorizePlaybackSession(payload.sessionId, user);
+  const sessionAccess = await authorizePlaybackSessionToken({
+    sessionId: payload.sessionId,
+    userId: payload.userId,
+    lessonId: payload.lessonId,
+  });
 
   if (!sessionAccess.ok) {
     console.warn("playback.stream.denied", {
@@ -147,6 +149,8 @@ export async function GET(
     "Cache-Control": "private, no-store, max-age=0",
     "Content-Type": videoAsset.mimeType || "application/octet-stream",
     "X-Content-Type-Options": "nosniff",
+    "Access-Control-Expose-Headers":
+      "Accept-Ranges, Content-Range, Content-Length, Content-Type",
   };
 
   if (request.headers.get("range") && !range) {

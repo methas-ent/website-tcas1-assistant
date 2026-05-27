@@ -4,7 +4,10 @@ import { PublicFooter } from "@/components/public/PublicFooter";
 import { PublicHeader } from "@/components/public/PublicHeader";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getCurrentUser, isStudent } from "@/lib/auth";
-import { getPublishedPackages } from "@/lib/storefront";
+import {
+  getPublishedCourses,
+  getPublishedPackages,
+} from "@/lib/storefront";
 
 export default async function CheckoutPage() {
   const user = await getCurrentUser();
@@ -13,7 +16,10 @@ export default async function CheckoutPage() {
     redirect("/login?next=/checkout");
   }
 
-  const packages = await getPublishedPackages();
+  const [packages, courses] = await Promise.all([
+    getPublishedPackages(),
+    getPublishedCourses(),
+  ]);
 
   return (
     <div className="min-h-screen bg-surface-soft">
@@ -29,6 +35,7 @@ export default async function CheckoutPage() {
           <CheckoutClient
             customerEmail={user!.email}
             customerName={user!.name}
+            courses={courses}
             packages={packages}
           />
         </section>

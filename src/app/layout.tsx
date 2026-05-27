@@ -15,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="th" data-admin-language="th" data-admin-theme="light">
       <body
-        className="min-h-screen bg-surface-soft font-sans text-ink antialiased transition-colors duration-300"
+        className="min-h-screen bg-surface-soft pb-16 font-sans text-ink antialiased transition-colors duration-300 lg:pb-0"
         data-admin-language="th"
         data-admin-shell
         data-admin-theme="light"

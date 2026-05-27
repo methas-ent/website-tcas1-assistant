@@ -16,6 +16,8 @@ export type StorefrontCourse = {
   subject: string;
   coverImageUrl: string | null;
   courseCode: string;
+  priceCents: number;
+  currency: string;
   lessonCount: number;
   chapterCount: number;
   durationSeconds: number;
@@ -48,6 +50,8 @@ type CourseWithContent = {
   subject: string;
   coverImageUrl: string | null;
   courseCode: string;
+  priceCents: number;
+  currency: string;
   chapters: Array<{
     lessons: Array<{
       durationSeconds: number | null;
@@ -71,6 +75,8 @@ function mapCourse(course: CourseWithContent): StorefrontCourse {
     subject: course.subject || course.subjectCategory || course.category,
     coverImageUrl: course.coverImageUrl,
     courseCode: course.courseCode,
+    priceCents: course.priceCents,
+    currency: course.currency,
     chapterCount: course.chapters.length,
     lessonCount: lessons.length,
     durationSeconds: lessons.reduce(
@@ -123,6 +129,8 @@ const courseSelect = {
   subject: true,
   coverImageUrl: true,
   courseCode: true,
+  priceCents: true,
+  currency: true,
   chapters: {
     where: { isPublished: PUBLISHED },
     orderBy: { sortOrder: "asc" as const },
@@ -188,4 +196,28 @@ export async function getPackageBySlug(slug: string) {
   });
 
   return coursePackage ? mapPackage(coursePackage) : null;
+}
+
+export async function getCoursePricingById(id: string) {
+  const course = await prisma.course.findFirst({
+    where: { id, isPublished: PUBLISHED },
+    select: { priceCents: true, currency: true },
+  });
+
+  return course;
+}
+
+export async function getPublishedCoursesByIds(
+  ids: string[],
+): Promise<StorefrontCourse[]> {
+  if (!ids.length) {
+    return [];
+  }
+
+  const courses = await prisma.course.findMany({
+    where: { id: { in: ids }, isPublished: PUBLISHED },
+    select: courseSelect,
+  });
+
+  return courses.map(mapCourse);
 }

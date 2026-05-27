@@ -3,28 +3,48 @@
 import { useEffect, useState } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import {
+  addCartCourse,
   addCartPackage,
-  readCartPackageIds,
+  readCartItems,
+  type CartItemType,
 } from "@/components/public/cart-storage";
 
-type AddToCartButtonProps = {
-  packageId: string;
+type AddToCartButtonBaseProps = {
   size?: "sm" | "md" | "lg";
   fullWidth?: boolean;
   className?: string;
 };
 
-export function AddToCartButton({
-  packageId,
-  size = "md",
-  fullWidth,
-  className,
-}: AddToCartButtonProps) {
+type AddToCartPackageProps = AddToCartButtonBaseProps & {
+  packageId: string;
+  courseId?: undefined;
+};
+
+type AddToCartCourseProps = AddToCartButtonBaseProps & {
+  courseId: string;
+  packageId?: undefined;
+};
+
+export type AddToCartButtonProps =
+  | AddToCartPackageProps
+  | AddToCartCourseProps;
+
+export function AddToCartButton(props: AddToCartButtonProps) {
+  const { size = "md", fullWidth, className } = props;
+  const type: CartItemType = "courseId" in props && props.courseId ? "course" : "package";
+  const targetId =
+    "courseId" in props && props.courseId
+      ? props.courseId
+      : (props as AddToCartPackageProps).packageId;
+
   const [isAdded, setIsAdded] = useState(false);
 
   useEffect(() => {
-    setIsAdded(readCartPackageIds().includes(packageId));
-  }, [packageId]);
+    const items = readCartItems();
+    setIsAdded(
+      items.some((item) => item.type === type && item.id === targetId),
+    );
+  }, [type, targetId]);
 
   if (isAdded) {
     return (
@@ -45,7 +65,11 @@ export function AddToCartButton({
       className={className}
       fullWidth={fullWidth}
       onClick={() => {
-        addCartPackage(packageId);
+        if (type === "course") {
+          addCartCourse(targetId);
+        } else {
+          addCartPackage(targetId);
+        }
         setIsAdded(true);
       }}
       size={size}

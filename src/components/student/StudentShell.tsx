@@ -40,7 +40,7 @@ export function StudentShell({
         ข้ามไปยังเนื้อหา
       </a>
       <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-page py-4 pr-36 sm:pr-44">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-page py-4 lg:pr-44">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-700">
               Student

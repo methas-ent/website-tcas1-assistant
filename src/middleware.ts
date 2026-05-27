@@ -72,11 +72,15 @@ function applyCorsHeaders(response: NextResponse, origin: string | null) {
   response.headers.set("Access-Control-Allow-Credentials", "true");
   response.headers.set(
     "Access-Control-Allow-Headers",
-    "Authorization, Content-Type",
+    "Authorization, Content-Type, Range",
   );
   response.headers.set(
     "Access-Control-Allow-Methods",
     "GET, POST, OPTIONS",
+  );
+  response.headers.set(
+    "Access-Control-Expose-Headers",
+    "Accept-Ranges, Content-Range, Content-Length, Content-Type",
   );
   response.headers.append("Vary", "Origin");
 

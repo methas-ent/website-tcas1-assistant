@@ -100,6 +100,7 @@ export default async function HomePage() {
                 eyebrow="แพ็กเกจ"
                 actionLabel="ดูรายละเอียด"
                 href={`/courses/${coursePackage.slug}`}
+                imageSrc={coursePackage.coverImageUrl}
                 priceLabel={formatPrice(
                   coursePackage.priceCents,
                   coursePackage.currency,
@@ -138,6 +139,7 @@ export default async function HomePage() {
                 badges={[course.category]}
                 href={`/courses/${course.slug}`}
                 actionLabel="ดูคอร์ส"
+                priceLabel={formatPrice(course.priceCents, course.currency)}
                 meta={
                   <span>
                     {course.chapterCount} บท · {course.lessonCount} บทเรียน ·{" "}
@@ -145,6 +147,13 @@ export default async function HomePage() {
                   </span>
                 }
                 imageSrc={course.coverImageUrl}
+                footer={
+                  <AddToCartButton
+                    fullWidth
+                    courseId={course.id}
+                    size="sm"
+                  />
+                }
               />
             ))}
           </div>

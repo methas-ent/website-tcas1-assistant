@@ -81,6 +81,74 @@ export async function authorizePlaybackSession(
   };
 }
 
+export async function authorizePlaybackSessionToken(input: {
+  sessionId: string;
+  userId: string;
+  lessonId: string;
+}): Promise<PlaybackSessionAccess> {
+  const session = await prisma.playbackSession.findUnique({
+    where: { id: input.sessionId },
+    select: {
+      id: true,
+      userId: true,
+      lessonId: true,
+      status: true,
+      endedAt: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  if (!session || session.status !== "ACTIVE" || session.endedAt) {
+    return {
+      ok: false,
+      status: 401,
+      error: "SESSION_INACTIVE",
+      message: "Playback session is not active",
+    };
+  }
+
+  if (
+    !session.userId ||
+    session.userId !== input.userId ||
+    session.lessonId !== input.lessonId ||
+    !session.user
+  ) {
+    return {
+      ok: false,
+      status: 403,
+      error: "FORBIDDEN",
+      message: "Token session mismatch",
+    };
+  }
+
+  const access = await authorizeLessonPlayback(session.lessonId, {
+    requireVideo: true,
+    user: session.user,
+  });
+
+  if (!access.ok) {
+    return {
+      ok: false,
+      status: access.status,
+      error: access.error,
+      message: getPlaybackErrorMessage(access.error),
+    };
+  }
+
+  return {
+    ok: true,
+    session,
+    access,
+  };
+}
+
 export async function issuePlaybackTokenForSession(
   sessionId: string,
   user?: CurrentUser | null,

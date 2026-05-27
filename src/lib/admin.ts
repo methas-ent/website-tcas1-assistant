@@ -65,6 +65,7 @@ export async function getAdminDashboard() {
     prisma.orderItem.findMany({
       where: { order: { status: "PAID" } },
       select: {
+        courseId: true,
         coursePackage: {
           select: {
             items: {
@@ -76,9 +77,14 @@ export async function getAdminDashboard() {
     }),
   ]);
   const purchasedCourseIds = new Set(
-    paidOrderItems.flatMap((item) =>
-      item.coursePackage.items.map((packageItem) => packageItem.courseId),
-    ),
+    paidOrderItems.flatMap((item) => {
+      if (item.coursePackage) {
+        return item.coursePackage.items.map(
+          (packageItem) => packageItem.courseId,
+        );
+      }
+      return item.courseId ? [item.courseId] : [];
+    }),
   );
 
   return {

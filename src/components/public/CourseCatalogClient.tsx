@@ -249,6 +249,7 @@ export function CourseCatalogClient({
               lessonCount={coursePackage.lessonCount}
               durationLabel={formatCompactDuration(coursePackage.durationSeconds)}
               href={`/courses/${coursePackage.slug}`}
+              imageSrc={coursePackage.coverImageUrl}
               featured
               footer={
                 <AddToCartButton
@@ -295,6 +296,7 @@ export function CourseCatalogClient({
               ]}
               href={`/courses/${course.slug}`}
               actionLabel="ดูรายละเอียด"
+              priceLabel={formatPrice(course.priceCents, course.currency)}
               meta={
                 <span>
                   {course.chapterCount} บท · {course.lessonCount} บทเรียน ·{" "}
@@ -302,6 +304,13 @@ export function CourseCatalogClient({
                 </span>
               }
               imageSrc={course.coverImageUrl}
+              footer={
+                <AddToCartButton
+                  fullWidth
+                  courseId={course.id}
+                  size="sm"
+                />
+              }
             />
           ))}
         </div>

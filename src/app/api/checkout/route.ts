@@ -11,21 +11,23 @@ type CheckoutRequestBody = {
   customerPhone?: unknown;
   note?: unknown;
   packageIds?: unknown;
+  courseIds?: unknown;
 };
 
 type CheckoutPayload = {
   customerPhone: string | null;
   note: string | null;
   packageIds: string[];
+  courseIds: string[];
   paymentSlip: File | null;
 };
 
-function normalizePackageIds(values: unknown[]) {
+function normalizeIds(values: unknown[]) {
   return Array.from(
     new Set(
       values.filter(
-        (packageId): packageId is string =>
-          typeof packageId === "string" && packageId.length > 0,
+        (value): value is string =>
+          typeof value === "string" && value.length > 0,
       ),
     ),
   );
@@ -43,7 +45,8 @@ async function readCheckoutPayload(request: Request): Promise<CheckoutPayload> {
     const paymentSlip = formData.get("paymentSlip");
 
     return {
-      packageIds: normalizePackageIds(formData.getAll("packageIds")),
+      packageIds: normalizeIds(formData.getAll("packageIds")),
+      courseIds: normalizeIds(formData.getAll("courseIds")),
       customerPhone: optionalString(formData.get("customerPhone")),
       note: optionalString(formData.get("note")),
       paymentSlip: paymentSlip instanceof File ? paymentSlip : null,
@@ -56,13 +59,26 @@ async function readCheckoutPayload(request: Request): Promise<CheckoutPayload> {
   const rawPackageIds = Array.isArray(body?.packageIds)
     ? body.packageIds
     : [];
+  const rawCourseIds = Array.isArray(body?.courseIds) ? body.courseIds : [];
 
   return {
-    packageIds: normalizePackageIds(rawPackageIds),
+    packageIds: normalizeIds(rawPackageIds),
+    courseIds: normalizeIds(rawCourseIds),
     customerPhone: optionalString(body?.customerPhone),
     note: optionalString(body?.note),
     paymentSlip: null,
   };
+}
+
+function assertExactlyOneRef(refs: {
+  packageId?: string | null;
+  courseId?: string | null;
+}) {
+  if (Boolean(refs.packageId) === Boolean(refs.courseId)) {
+    throw new Error(
+      "OrderItem must reference exactly one of packageId or courseId",
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -76,32 +92,65 @@ export async function POST(request: Request) {
   }
 
   const checkout = await readCheckoutPayload(request);
-  const packageIds = checkout.packageIds;
+  const { packageIds, courseIds } = checkout;
 
-  if (!packageIds.length) {
+  if (!packageIds.length && !courseIds.length) {
     return NextResponse.json(
-      { error: "ยังไม่มีแพ็กเกจในตะกร้า" },
+      { error: "ยังไม่มีรายการในตะกร้า" },
       { status: 400 },
     );
   }
 
-  const packages = await prisma.coursePackage.findMany({
-    where: {
-      id: { in: packageIds },
-      isPublished: true,
-    },
-    select: {
-      id: true,
-      title: true,
-      priceCents: true,
-      currency: true,
-      items: {
-        select: {
-          courseId: true,
-        },
-      },
-    },
-  });
+  const [packages, courses] = await Promise.all([
+    packageIds.length
+      ? prisma.coursePackage.findMany({
+          where: {
+            id: { in: packageIds },
+            isPublished: true,
+          },
+          select: {
+            id: true,
+            title: true,
+            priceCents: true,
+            currency: true,
+            items: {
+              select: {
+                courseId: true,
+              },
+            },
+          },
+        })
+      : Promise.resolve(
+          [] as Array<{
+            id: string;
+            title: string;
+            priceCents: number;
+            currency: string;
+            items: { courseId: string }[];
+          }>,
+        ),
+    courseIds.length
+      ? prisma.course.findMany({
+          where: {
+            id: { in: courseIds },
+            isPublished: true,
+          },
+          select: {
+            id: true,
+            title: true,
+            priceCents: true,
+            currency: true,
+          },
+        })
+      : Promise.resolve(
+          [] as Array<{
+            id: string;
+            title: string;
+            priceCents: number;
+            currency: string;
+          }>,
+        ),
+  ]);
 
   if (packages.length !== packageIds.length) {
     return NextResponse.json(
@@ -110,14 +159,27 @@ export async function POST(request: Request) {
     );
   }
 
-  const currency = packages[0]?.currency ?? "THB";
+  if (courses.length !== courseIds.length) {
+    return NextResponse.json(
+      { error: "บางคอร์สไม่พร้อมขายแล้ว กรุณาตรวจสอบตะกร้าอีกครั้ง" },
+      { status: 400 },
+    );
+  }
 
-  if (packages.some((coursePackage) => coursePackage.currency !== currency)) {
+  const currencies = new Set<string>([
+    ...packages.map((pkg) => pkg.currency),
+    ...courses.map((course) => course.currency),
+  ]);
+
+  if (currencies.size > 1) {
     return NextResponse.json(
       { error: "ยังไม่รองรับตะกร้าหลายสกุลเงิน" },
       { status: 400 },
     );
   }
+
+  const currency =
+    packages[0]?.currency ?? courses[0]?.currency ?? "THB";
 
   if (packages.some((coursePackage) => coursePackage.items.length === 0)) {
     return NextResponse.json(
@@ -126,10 +188,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const totalCents = packages.reduce(
-    (sum, coursePackage) => sum + coursePackage.priceCents,
-    0,
-  );
+  const totalCents =
+    packages.reduce((sum, pkg) => sum + pkg.priceCents, 0) +
+    courses.reduce((sum, course) => sum + course.priceCents, 0);
 
   if (!checkout.paymentSlip) {
     return NextResponse.json(
@@ -151,6 +212,30 @@ export async function POST(request: Request) {
     );
   }
 
+  const packageItems = packages.map((coursePackage) => {
+    assertExactlyOneRef({ packageId: coursePackage.id, courseId: null });
+    return {
+      packageId: coursePackage.id,
+      courseId: null,
+      titleSnapshot: coursePackage.title,
+      priceCentsSnapshot: coursePackage.priceCents,
+      courseIdsSnapshotJson: JSON.stringify(
+        Array.from(new Set(coursePackage.items.map((item) => item.courseId))),
+      ),
+    };
+  });
+
+  const courseItems = courses.map((course) => {
+    assertExactlyOneRef({ packageId: null, courseId: course.id });
+    return {
+      packageId: null,
+      courseId: course.id,
+      titleSnapshot: course.title,
+      priceCentsSnapshot: course.priceCents,
+      courseIdsSnapshotJson: JSON.stringify([course.id]),
+    };
+  });
+
   const order = await prisma.order.create({
     data: {
       userId: user!.id,
@@ -167,14 +252,7 @@ export async function POST(request: Request) {
       paymentSlipSizeBytes: paymentSlip.sizeBytes,
       paymentSlipUploadedAt: new Date(),
       items: {
-        create: packages.map((coursePackage) => ({
-          packageId: coursePackage.id,
-          titleSnapshot: coursePackage.title,
-          priceCentsSnapshot: coursePackage.priceCents,
-          courseIdsSnapshotJson: JSON.stringify(
-            Array.from(new Set(coursePackage.items.map((item) => item.courseId))),
-          ),
-        })),
+        create: [...packageItems, ...courseItems],
       },
     },
     select: { id: true },

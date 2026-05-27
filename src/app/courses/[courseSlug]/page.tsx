@@ -13,6 +13,7 @@ import { getCourseBySlug } from "@/lib/catalog/queries";
 import {
   formatCompactDuration,
   formatPrice,
+  getCoursePricingById,
   getPackageBySlug,
   getStorefrontCatalog,
 } from "@/lib/storefront";
@@ -155,7 +156,12 @@ export default async function CourseOrPackagePage({ params }: DetailPageProps) {
     notFound();
   }
 
-  const { packages } = await getStorefrontCatalog();
+  const [{ packages }, pricing] = await Promise.all([
+    getStorefrontCatalog(),
+    getCoursePricingById(course.id),
+  ]);
+  const coursePriceCents = pricing?.priceCents ?? 0;
+  const courseCurrency = pricing?.currency ?? "THB";
   const relatedPackages = packages.filter((item) =>
     item.courses.some((includedCourse) => includedCourse.id === course.id),
   );
@@ -169,17 +175,11 @@ export default async function CourseOrPackagePage({ params }: DetailPageProps) {
           title={course.title}
           description={course.description}
           actions={
-            relatedPackages[0] ? (
-              <AddToCartButton
-                className="w-full sm:w-auto"
-                packageId={relatedPackages[0].id}
-                size="lg"
-              />
-            ) : (
-              <ButtonLink className="w-full sm:w-auto" href="/courses" size="lg">
-                ดูแพ็กเกจทั้งหมด
-              </ButtonLink>
-            )
+            <AddToCartButton
+              className="w-full sm:w-auto"
+              courseId={course.id}
+              size="lg"
+            />
           }
         />
         <section className="mx-auto grid max-w-7xl gap-6 px-page py-6 sm:py-8 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -188,7 +188,7 @@ export default async function CourseOrPackagePage({ params }: DetailPageProps) {
               <SectionHeader
                 eyebrow={course.subject}
                 title="เนื้อหาคอร์ส"
-                description="ดูภาพรวมบทเรียนก่อนเลือกแพ็กเกจที่มีคอร์สนี้"
+                description="ดูภาพรวมบทเรียนก่อนซื้อคอร์สหรือเลือกแพ็กเกจที่รวมคอร์สนี้"
               />
               <div className="mt-6 grid gap-3">
                 {course.modules.map((courseModule) => (
@@ -208,45 +208,61 @@ export default async function CourseOrPackagePage({ params }: DetailPageProps) {
 
           <aside className="lg:sticky lg:top-24 lg:self-start">
             <Card>
-              <p className="text-sm font-bold text-ink-muted">
-                แพ็กเกจที่มีคอร์สนี้
+              <p className="text-sm font-bold text-ink-muted">ราคาคอร์ส</p>
+              <p className="mt-2 font-heading text-3xl font-bold text-primary-700">
+                {formatPrice(coursePriceCents, courseCurrency)}
               </p>
-              <div className="mt-4 grid gap-4">
-                {relatedPackages.map((item) => (
-                  <div
-                    className="rounded-card border border-line bg-surface-soft p-4"
-                    key={item.id}
-                  >
-                    <h2 className="font-heading text-lg font-bold text-ink">
-                      {item.title}
-                    </h2>
-                    <p className="mt-2 text-sm text-ink-muted">
-                      {formatPrice(item.priceCents, item.currency)}
-                    </p>
-                    <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap">
-                      <AddToCartButton
-                        className="w-full sm:w-auto"
-                        packageId={item.id}
-                        size="sm"
-                      />
-                      <ButtonLink
-                        className="w-full sm:w-auto"
-                        href={`/courses/${item.slug}`}
-                        size="sm"
-                        variant="outline"
-                      >
-                        รายละเอียดแพ็กเกจ
-                      </ButtonLink>
-                    </div>
-                  </div>
-                ))}
-                {!relatedPackages.length ? (
-                  <p className="text-sm text-ink-muted">
-                    ยังไม่มีแพ็กเกจที่รวมคอร์สนี้
-                  </p>
-                ) : null}
+              <div className="mt-6 grid gap-3">
+                <AddToCartButton
+                  className="w-full"
+                  courseId={course.id}
+                  size="lg"
+                />
+                <ButtonLink href="/cart" variant="outline">
+                  เปิดตะกร้า
+                </ButtonLink>
               </div>
+              <p className="mt-4 text-xs leading-5 text-ink-muted">
+                Checkout จะสร้างคำสั่งซื้อสถานะรอตรวจสอบ ยังไม่มีการตัดเงินอัตโนมัติ
+              </p>
             </Card>
+            {relatedPackages.length ? (
+              <Card className="mt-4">
+                <p className="text-sm font-bold text-ink-muted">
+                  แพ็กเกจที่มีคอร์สนี้
+                </p>
+                <div className="mt-4 grid gap-4">
+                  {relatedPackages.map((item) => (
+                    <div
+                      className="rounded-card border border-line bg-surface-soft p-4"
+                      key={item.id}
+                    >
+                      <h2 className="font-heading text-lg font-bold text-ink">
+                        {item.title}
+                      </h2>
+                      <p className="mt-2 text-sm text-ink-muted">
+                        {formatPrice(item.priceCents, item.currency)}
+                      </p>
+                      <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap">
+                        <AddToCartButton
+                          className="w-full sm:w-auto"
+                          packageId={item.id}
+                          size="sm"
+                        />
+                        <ButtonLink
+                          className="w-full sm:w-auto"
+                          href={`/courses/${item.slug}`}
+                          size="sm"
+                          variant="outline"
+                        >
+                          รายละเอียดแพ็กเกจ
+                        </ButtonLink>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            ) : null}
           </aside>
         </section>
       </main>
