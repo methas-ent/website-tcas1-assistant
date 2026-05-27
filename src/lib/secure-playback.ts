@@ -257,7 +257,24 @@ export async function authorizeLessonPlayback(
   });
 
   if (!enrollment) {
-    return { ok: false, status: 403, error: "FORBIDDEN" };
+    // Pay Time fallback: an APPROVED PayTimeOrder writes a row to
+    // `VideoAccessExtension`. If the user has an unexpired extension for
+    // this exact lesson, treat it as a supplemental grant. The lesson is
+    // still required to be published (checked above) so an unpublished
+    // lesson stays locked even with an extension.
+    const extension = await prisma.videoAccessExtension.findFirst({
+      where: {
+        userId: user.id,
+        lessonId: lesson.id,
+        expiresAt: { gt: new Date() },
+        status: { not: "REVOKED" },
+      },
+      select: { id: true },
+    });
+
+    if (!extension) {
+      return { ok: false, status: 403, error: "FORBIDDEN" };
+    }
   }
 
   if (options.requireVideo && !hasReadyVideo(lesson)) {

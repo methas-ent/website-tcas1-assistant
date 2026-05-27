@@ -1,5 +1,9 @@
 import { ApiError } from "@knowledge/api-client";
-import type { MobileLessonContext, PlaybackAuthorizeResponse } from "@knowledge/shared";
+import type {
+  MobileLessonContext,
+  PayTimeStatusResponse,
+  PlaybackAuthorizeResponse,
+} from "@knowledge/shared";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
@@ -30,6 +34,7 @@ export default function LessonScreen() {
     null,
   );
   const [playback, setPlayback] = useState<PlaybackAuthorizeResponse | null>(null);
+  const [payTime, setPayTime] = useState<PayTimeStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [completeMessage, setCompleteMessage] = useState<string | null>(null);
 
@@ -47,7 +52,7 @@ export default function LessonScreen() {
     setPlayback(null);
 
     try {
-      const [lessonResult, playbackResult] = await Promise.all([
+      const [lessonResult, playbackResult, payTimeResult] = await Promise.all([
         api.getLesson(normalizedLessonId),
         api.authorizePlayback(normalizedLessonId).catch((requestError) => {
           if (requestError instanceof ApiError && requestError.code === "NO_VIDEO") {
@@ -56,10 +61,12 @@ export default function LessonScreen() {
 
           throw requestError;
         }),
+        api.getPayTimeStatus(normalizedLessonId).catch(() => null),
       ]);
 
       setLessonContext(lessonResult);
       setPlayback(playbackResult);
+      setPayTime(payTimeResult);
       void api.updateProgress({
         lessonId: normalizedLessonId,
         progressSeconds: lessonResult.lesson.progressSeconds,
@@ -141,6 +148,38 @@ export default function LessonScreen() {
       (chapter) => chapter.id === lessonContext.chapter.id,
     )?.lessons ?? [];
 
+  const accessSource = lessonContext.accessSource ?? "ENROLLMENT";
+  const payTimeExpiry = lessonContext.payTimeExpiresAt
+    ? new Date(lessonContext.payTimeExpiresAt)
+    : null;
+  const nearExpiry = payTimeExpiry
+    ? payTimeExpiry.getTime() - Date.now() < 6 * 3600 * 1000
+    : false;
+  const showPayTimeBanner =
+    accessSource === "PAY_TIME" ||
+    nearExpiry ||
+    payTime?.eligibility === "OK";
+  const goToPayTime = () => {
+    if (!normalizedLessonId) {
+      return;
+    }
+
+    router.push({
+      pathname: "/pay-time/[lessonId]",
+      params: { lessonId: normalizedLessonId },
+    });
+  };
+  const goToExistingOrder = () => {
+    if (!payTime?.pendingOrderId) {
+      return;
+    }
+
+    router.push({
+      pathname: "/pay-time/orders/[orderId]",
+      params: { orderId: payTime.pendingOrderId },
+    });
+  };
+
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -150,6 +189,28 @@ export default function LessonScreen() {
           action={<SecondaryButton title={t("back")} onPress={goBackToCourse} />}
         />
         <ProtectedContentNotice />
+        {showPayTimeBanner ? (
+          <View style={styles.payTimeBanner}>
+            <Text style={styles.payTimeTitle}>{t("payTimeTitle")}</Text>
+            {payTimeExpiry ? (
+              <Text style={styles.payTimeMeta}>
+                {t("payTimeRemaining")}:{" "}
+                {payTimeExpiry.toLocaleString("th-TH", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </Text>
+            ) : null}
+            {payTime?.pendingOrderId ? (
+              <SecondaryButton
+                title={t("payTimePending")}
+                onPress={goToExistingOrder}
+              />
+            ) : payTime?.eligibility === "OK" ? (
+              <PrimaryButton title={t("payTimeBuyCta")} onPress={goToPayTime} />
+            ) : null}
+          </View>
+        ) : null}
         <ProtectedVideoPlayer playback={playback} lessonId={normalizedLessonId} />
         <View style={styles.infoCard}>
           <Text style={styles.chapterTitle}>{lessonContext.chapter.title}</Text>
@@ -257,6 +318,24 @@ function createLessonStyles(
       color: palette.ink,
       fontFamily: "Prompt_800ExtraBold",
       fontSize: 17,
+    },
+    payTimeBanner: {
+      gap: 10,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: palette.brand,
+      backgroundColor: isDark ? "rgba(56, 189, 248, 0.12)" : "#eaf3ff",
+      padding: 14,
+    },
+    payTimeTitle: {
+      color: palette.ink,
+      fontFamily: "Prompt_800ExtraBold",
+      fontSize: 16,
+    },
+    payTimeMeta: {
+      color: palette.muted,
+      fontFamily: "Prompt_400Regular",
+      fontSize: 13,
     },
   });
 }

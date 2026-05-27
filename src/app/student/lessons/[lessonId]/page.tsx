@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { StudentShell } from "@/components/student";
+import { PayTimeAccessPanel, StudentShell } from "@/components/student";
 import { Badge } from "@/components/ui/Badge";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -89,6 +89,18 @@ export default async function StudentLessonPage({
               )}
             </div>
           </div>
+
+          <PayTimeAccessPanel
+            lessonId={context.lesson.id}
+            accessSource={context.accessSource}
+            payTimeExpiresAt={
+              context.payTimeExpiresAt
+                ? context.payTimeExpiresAt.toISOString()
+                : null
+            }
+            userName={user.name}
+            userEmail={user.email}
+          />
 
           <VideoPlayer
             lessonId={context.lesson.id}

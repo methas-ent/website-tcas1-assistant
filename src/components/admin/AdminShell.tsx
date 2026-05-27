@@ -22,6 +22,7 @@ const defaultNavItems: AdminShellNavItem[] = [
   { href: "/admin", label: "แดชบอร์ด" },
   { href: "/admin/orders", label: "ออเดอร์" },
   { href: "/admin/videos", label: "อัปโหลด VDO" },
+  { href: "/admin/pay-time", label: "Pay Time" },
 ];
 
 const studioRewriteHrefs = new Set([
@@ -36,6 +37,19 @@ function normalizeNavItem(item: AdminShellNavItem): AdminShellNavItem {
       ...item,
       href: "/admin/videos",
       label: "อัปโหลด VDO",
+    };
+  }
+
+  // Deep Pay Time routes (e.g. /admin/pay-time/[id]) should highlight
+  // the top-level Pay Time nav item.
+  if (
+    item.href.startsWith("/admin/pay-time/") ||
+    item.href === "/admin/pay-time"
+  ) {
+    return {
+      ...item,
+      href: "/admin/pay-time",
+      label: "Pay Time",
     };
   }
 

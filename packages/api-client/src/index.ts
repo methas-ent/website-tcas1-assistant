@@ -5,6 +5,10 @@ import type {
   MobileCourseListItem,
   MobileLessonContext,
   MobileUser,
+  PayTimeOrderCreateResponse,
+  PayTimeOrderResponse,
+  PayTimeOrderSlipUpdateResponse,
+  PayTimeStatusResponse,
   PlaybackAuthorizeResponse,
 } from "@knowledge/shared";
 
@@ -74,7 +78,7 @@ export class KnowledgeApiClient {
 
   private async request<T>(
     path: string,
-    init: RequestInit & { json?: JsonBody } = {},
+    init: RequestInit & { json?: JsonBody; form?: FormData } = {},
   ): Promise<T> {
     const headers = new Headers(init.headers);
     const sessionToken = this.getSessionToken
@@ -90,6 +94,12 @@ export class KnowledgeApiClient {
     if (init.json) {
       headers.set("Content-Type", "application/json");
       body = JSON.stringify(init.json);
+    }
+
+    if (init.form) {
+      // Let fetch set the multipart boundary automatically.
+      headers.delete("Content-Type");
+      body = init.form;
     }
 
     const response = await fetch(this.resolveUrl(path), {
@@ -187,6 +197,32 @@ export class KnowledgeApiClient {
       { method: "POST" },
     );
   }
+
+  getPayTimeStatus(lessonId: string) {
+    return this.request<PayTimeStatusResponse>(
+      `/api/mobile/videos/${encodeURIComponent(lessonId)}/pay-time`,
+    );
+  }
+
+  createPayTimeOrder(lessonId: string, form: FormData) {
+    return this.request<PayTimeOrderCreateResponse>(
+      `/api/mobile/videos/${encodeURIComponent(lessonId)}/pay-time/orders`,
+      { method: "POST", form },
+    );
+  }
+
+  getPayTimeOrder(orderId: string) {
+    return this.request<PayTimeOrderResponse>(
+      `/api/mobile/pay-time/orders/${encodeURIComponent(orderId)}`,
+    );
+  }
+
+  replacePayTimeSlip(orderId: string, form: FormData) {
+    return this.request<PayTimeOrderSlipUpdateResponse>(
+      `/api/mobile/pay-time/orders/${encodeURIComponent(orderId)}/slip`,
+      { method: "POST", form },
+    );
+  }
 }
 
 export type {
@@ -196,5 +232,9 @@ export type {
   MobileCourseListItem,
   MobileLessonContext,
   MobileUser,
+  PayTimeOrderCreateResponse,
+  PayTimeOrderResponse,
+  PayTimeOrderSlipUpdateResponse,
+  PayTimeStatusResponse,
   PlaybackAuthorizeResponse,
 };

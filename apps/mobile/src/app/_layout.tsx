@@ -55,6 +55,8 @@ function RootStack() {
         <Stack.Screen name="login" />
         <Stack.Screen name="courses/[courseId]" />
         <Stack.Screen name="lessons/[lessonId]" />
+        <Stack.Screen name="pay-time/[lessonId]" />
+        <Stack.Screen name="pay-time/orders/[orderId]" />
       </Stack>
     </>
   );

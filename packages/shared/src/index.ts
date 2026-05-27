@@ -61,6 +61,8 @@ export type MobileCourseDetail = MobileCourseListItem & {
   chapters: MobileChapterDetail[];
 };
 
+export type MobileLessonAccessSource = "ENROLLMENT" | "PAY_TIME";
+
 export type MobileLessonContext = {
   lesson: MobileLessonListItem;
   course: {
@@ -78,6 +80,72 @@ export type MobileLessonContext = {
   chapters: MobileChapterDetail[];
   previousLessonId: string | null;
   nextLessonId: string | null;
+  accessSource?: MobileLessonAccessSource;
+  payTimeExpiresAt?: string | null;
+};
+
+export type PayTimeEligibilityCode =
+  | "OK"
+  | "NEVER_ENROLLED"
+  | "NOT_ENABLED"
+  | "LESSON_NOT_FOUND";
+
+export type PayTimeStatusResponse = {
+  eligibility: PayTimeEligibilityCode;
+  lessonId: string;
+  priceCents: number;
+  hours: number;
+  currency: string;
+  description: string | null;
+  activeExtension: {
+    expiresAt: string;
+    hoursGranted: number;
+  } | null;
+  pendingOrderId: string | null;
+};
+
+export type PayTimeOrderStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export type PayTimeOrderResponse = {
+  order: {
+    id: string;
+    lessonId: string;
+    status: PayTimeOrderStatus | string;
+    priceCents: number;
+    hours: number;
+    currency: string;
+    title: string;
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string | null;
+    note: string | null;
+    createdAt: string;
+    approvedAt: string | null;
+    rejectedAt: string | null;
+    appliedAt: string | null;
+    extension: {
+      id: string;
+      expiresAt: string;
+      startsAt: string;
+      hoursGranted: number;
+      status: string;
+    } | null;
+  };
+};
+
+export type PayTimeOrderCreateResponse = {
+  orderId: string;
+  status: PayTimeOrderStatus | string;
+  priceCents: number;
+  hoursSnapshot: number;
+  currency: string;
+  expectedTotalThb: string;
+};
+
+export type PayTimeOrderSlipUpdateResponse = {
+  orderId: string;
+  status: PayTimeOrderStatus | string;
+  paymentSlipUploadedAt: string | null;
 };
 
 export type PlaybackAuthorizeResponse = {

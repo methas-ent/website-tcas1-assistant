@@ -34,12 +34,16 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sessions         Session[]
-  orders           Order[]
-  enrollments      Enrollment[]
-  courseProgress   CourseProgress[]
-  lessonProgress   LessonProgress[]
-  playbackSessions PlaybackSession[]
+  sessions              Session[]
+  orders                Order[]
+  enrollments           Enrollment[]
+  courseProgress        CourseProgress[]
+  lessonProgress        LessonProgress[]
+  playbackSessions      PlaybackSession[]
+  payTimeOrders         PayTimeOrder[]
+  payTimeOrdersApproved PayTimeOrder[]         @relation("PayTimeOrderApprovedBy")
+  payTimeOrdersRejected PayTimeOrder[]         @relation("PayTimeOrderRejectedBy")
+  videoAccessExtensions VideoAccessExtension[]
 
   @@index([role])
 }
@@ -131,20 +135,29 @@ model Lesson {
   // Compatibility field for the current Thai lesson list display.
   epNumber Int @default(0)
 
+  // Pay Time = per-video extra viewing time purchase (Phase 1 schema only).
+  payTimeEnabled     Boolean @default(false)
+  payTimePriceCents  Int     @default(0)
+  payTimeHours       Int     @default(24)
+  payTimeDescription String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  course     Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  chapter    Chapter           @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  videoAsset VideoAsset?       @relation(fields: [videoAssetId], references: [id], onDelete: SetNull)
-  progress   LessonProgress[]
-  sessions   PlaybackSession[]
+  course           Course                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  chapter          Chapter                @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  videoAsset       VideoAsset?            @relation(fields: [videoAssetId], references: [id], onDelete: SetNull)
+  progress         LessonProgress[]
+  sessions         PlaybackSession[]
+  payTimeOrders    PayTimeOrder[]
+  accessExtensions VideoAccessExtension[]
 
   @@unique([chapterId, epNumber])
   @@index([courseId, sortOrder])
   @@index([chapterId, sortOrder])
   @@index([videoAssetId])
   @@index([isPublished])
+  @@index([payTimeEnabled])
 }
 
 model VideoAsset {
@@ -350,4 +363,85 @@ model PlaybackSession {
   @@index([userKey, lessonId, status])
   @@index([userId, lessonId, status])
   @@index([status])
+}
+
+// Pay Time = per-video extra viewing time purchase. Independent of Order
+// (course purchase) — separate model on purpose so the existing checkout/
+// enrollment flow is untouched. Discriminator constant in code:
+// "VIDEO_TIME_EXTENSION".
+model PayTimeOrder {
+  id       String @id @default(cuid())
+  userId   String
+  lessonId String
+
+  // Snapshots taken at create time so admin review sees what was promised
+  // even if Lesson.payTime* changes later.
+  courseIdSnapshot   String
+  titleSnapshot      String
+  priceCentsSnapshot Int
+  hoursSnapshot      Int
+  currency           String @default("THB")
+
+  // Allowed values: "PENDING" | "APPROVED" | "REJECTED"
+  status String @default("PENDING")
+
+  // Payment slip — mirrors Order.paymentSlip* shape, stored under a
+  // `pay-time/` prefix by application code.
+  paymentSlipStorageKey       String?   @unique
+  paymentSlipOriginalFileName String?
+  paymentSlipMimeType         String?
+  paymentSlipSizeBytes        Int?
+  paymentSlipUploadedAt       DateTime?
+
+  approvedById String?
+  approvedAt   DateTime?
+  rejectedById String?
+  rejectedAt   DateTime?
+  // appliedAt = when VideoAccessExtension row was actually created
+  appliedAt    DateTime?
+
+  customerName  String
+  customerEmail String
+  customerPhone String?
+  note          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  lesson     Lesson                @relation(fields: [lessonId], references: [id], onDelete: Restrict)
+  approvedBy User?                 @relation("PayTimeOrderApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  rejectedBy User?                 @relation("PayTimeOrderRejectedBy", fields: [rejectedById], references: [id], onDelete: SetNull)
+  extension  VideoAccessExtension?
+
+  @@index([userId, status])
+  @@index([lessonId, status])
+  @@index([status, createdAt])
+}
+
+// Active video-level access grant from an APPROVED PayTimeOrder.
+// authorizeLessonPlayback queries this AFTER the enrollment check fails.
+// Idempotency: payTimeOrderId is @unique so approving the same order
+// twice violates the constraint and the txn rolls back.
+model VideoAccessExtension {
+  id             String   @id @default(cuid())
+  userId         String
+  lessonId       String
+  payTimeOrderId String   @unique
+  hoursGranted   Int
+  startsAt       DateTime @default(now())
+  expiresAt      DateTime
+
+  // Allowed values: "ACTIVE" | "EXPIRED" | "REVOKED"
+  // "EXPIRED" is informational; the live check uses expiresAt > now.
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  lesson       Lesson       @relation(fields: [lessonId], references: [id], onDelete: Restrict)
+  payTimeOrder PayTimeOrder @relation(fields: [payTimeOrderId], references: [id], onDelete: Restrict)
+
+  @@index([userId, lessonId, expiresAt])
+  @@index([lessonId, status])
 }

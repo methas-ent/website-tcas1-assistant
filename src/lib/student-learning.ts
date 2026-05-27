@@ -76,6 +76,8 @@ export type StudentCourseAccess =
     }
   | { status: "missing" };
 
+export type StudentLessonAccessSource = "ENROLLMENT" | "PAY_TIME";
+
 export type StudentLessonContext = {
   lesson: StudentLessonListItem;
   course: {
@@ -93,6 +95,21 @@ export type StudentLessonContext = {
   chapters: StudentChapterDetail[];
   previousLessonId: string | null;
   nextLessonId: string | null;
+  /**
+   * How this student earned access to this lesson on this request:
+   *   - "ENROLLMENT" — normal active enrollment on the course.
+   *   - "PAY_TIME"   — fallback via an APPROVED Pay Time extension. In
+   *                    this mode the context exposes ONLY the paid lesson
+   *                    (no siblings, no other chapters) so the UI doesn't
+   *                    accidentally suggest free access to neighbours.
+   */
+  accessSource: StudentLessonAccessSource;
+  /**
+   * For "PAY_TIME" only: when the active extension expires. Lets the UI
+   * render a banner like "เวลาดู Pay Time เหลือ X ชั่วโมง".
+   * `null` for "ENROLLMENT".
+   */
+  payTimeExpiresAt: Date | null;
 };
 
 export async function requireStudent(
@@ -440,7 +457,11 @@ export async function getStudentLessonContext(
   });
 
   if (!lesson) {
-    return null;
+    // No active enrollment grants access. Before giving up, check whether
+    // an APPROVED PayTimeOrder gave this user a still-active
+    // `VideoAccessExtension` for this lesson. Pay Time is *supplemental*:
+    // we expose ONLY this lesson — no siblings, no unpublished modules.
+    return getStudentLessonContextFromPayTime(userId, lessonId);
   }
 
   const course = await prisma.course.findFirst({
@@ -557,6 +578,134 @@ export async function getStudentLessonContext(
       currentIndex >= 0 && currentIndex < allLessons.length - 1
         ? allLessons[currentIndex + 1]?.id ?? null
         : null,
+    accessSource: "ENROLLMENT",
+    payTimeExpiresAt: null,
+  };
+}
+
+/**
+ * Degraded context loader used when the user has no active enrollment but
+ * does have an APPROVED Pay Time extension (`VideoAccessExtension.expiresAt
+ * > now`). Returns a single-lesson context — `chapters` contains exactly
+ * one chapter with exactly one lesson (the paid one). Neighbour navigation
+ * (`previousLessonId` / `nextLessonId`) is intentionally null so the UI
+ * can't trick a Pay Time user into thinking adjacent lessons are unlocked.
+ *
+ * Required for `student/lessons/[lessonId]/page.tsx` to render without
+ * crashing when the user reaches the page after their enrollment expired.
+ */
+async function getStudentLessonContextFromPayTime(
+  userId: string,
+  lessonId: string,
+): Promise<StudentLessonContext | null> {
+  const extension = await prisma.videoAccessExtension.findFirst({
+    where: {
+      userId,
+      lessonId,
+      expiresAt: { gt: new Date() },
+      status: { not: "REVOKED" },
+    },
+    orderBy: { expiresAt: "desc" },
+    select: { expiresAt: true },
+  });
+
+  if (!extension) {
+    return null;
+  }
+
+  // Pay Time still respects publish flags — an unpublished lesson stays
+  // locked even with a valid extension.
+  const lesson = await prisma.lesson.findFirst({
+    where: {
+      id: lessonId,
+      isPublished: PUBLISHED,
+      chapter: { isPublished: PUBLISHED },
+      course: { isPublished: PUBLISHED },
+    },
+    select: {
+      id: true,
+      epNumber: true,
+      title: true,
+      description: true,
+      durationSeconds: true,
+      isPreview: true,
+      progress: {
+        where: { userId },
+        select: { completedAt: true, progressSeconds: true },
+      },
+      chapter: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          sortOrder: true,
+        },
+      },
+      course: {
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          courseCode: true,
+          subject: true,
+          category: true,
+          subjectCategory: true,
+        },
+      },
+    },
+  });
+
+  if (!lesson) {
+    return null;
+  }
+
+  const lessonItem: StudentLessonListItem = {
+    id: lesson.id,
+    epNumber: lesson.epNumber,
+    title: lesson.title,
+    description: lesson.description,
+    durationSeconds: lesson.durationSeconds,
+    durationLabel: formatDuration(lesson.durationSeconds),
+    completed: Boolean(lesson.progress[0]?.completedAt),
+    progressSeconds: lesson.progress[0]?.progressSeconds ?? 0,
+    isPreview: lesson.isPreview,
+    locked: false,
+  };
+  const chapterDetail: StudentChapterDetail = {
+    id: lesson.chapter.id,
+    title: lesson.chapter.title,
+    description: lesson.chapter.description,
+    sortOrder: lesson.chapter.sortOrder,
+    lessonCount: 1,
+    completedLessonCount: lessonItem.completed ? 1 : 0,
+    totalDurationSeconds: lessonItem.durationSeconds ?? 0,
+    lessons: [lessonItem],
+  };
+  const subject =
+    lesson.course.subject?.trim() ||
+    lesson.course.category?.trim() ||
+    lesson.course.subjectCategory?.trim() ||
+    "คอร์สออนไลน์";
+
+  return {
+    lesson: lessonItem,
+    course: {
+      id: lesson.course.id,
+      slug: lesson.course.slug,
+      title: lesson.course.title,
+      courseCode: lesson.course.courseCode,
+      subject,
+    },
+    chapter: {
+      id: lesson.chapter.id,
+      title: lesson.chapter.title,
+      sortOrder: lesson.chapter.sortOrder,
+    },
+    chapters: [chapterDetail],
+    previousLessonId: null,
+    nextLessonId: null,
+    accessSource: "PAY_TIME",
+    payTimeExpiresAt: extension.expiresAt,
   };
 }
 

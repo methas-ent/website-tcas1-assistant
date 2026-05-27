@@ -118,17 +118,52 @@ export function resolveLocalPaymentSlipPath(storageKey: string) {
   return target;
 }
 
-export async function savePaymentSlip(file: File): Promise<StoredPaymentSlip> {
+export type SavePaymentSlipOptions = {
+  /**
+   * Optional sub-folder under the slip storage root. Used to keep
+   * Pay Time slips (`pay-time`) separated from course-checkout slips.
+   * Only `[a-z0-9-]+` segments are allowed; anything else is ignored.
+   */
+  subfolder?: string;
+};
+
+function sanitizeSubfolder(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim().replace(/^\/+|\/+$/g, "");
+
+  if (!trimmed) {
+    return null;
+  }
+
+  const segments = trimmed.split("/").filter(Boolean);
+
+  if (!segments.every((segment) => /^[a-z0-9-]+$/.test(segment))) {
+    return null;
+  }
+
+  return segments.join("/");
+}
+
+export async function savePaymentSlip(
+  file: File,
+  options: SavePaymentSlipOptions = {},
+): Promise<StoredPaymentSlip> {
   assertValidPaymentSlipFile(file);
 
   const now = new Date();
   const year = String(now.getFullYear());
   const month = String(now.getMonth() + 1).padStart(2, "0");
-  const storageKey = [
+  const subfolder = sanitizeSubfolder(options.subfolder);
+  const keyParts = [
+    ...(subfolder ? subfolder.split("/") : []),
     year,
     month,
     `${randomUUID()}${safeExtension(file.name, file.type)}`,
-  ].join("/");
+  ];
+  const storageKey = keyParts.join("/");
   const targetPath = resolveLocalPaymentSlipPath(storageKey);
   const bytes = Buffer.from(await file.arrayBuffer());
 

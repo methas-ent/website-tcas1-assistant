@@ -18,6 +18,10 @@ export function getAdminCatalogErrorMessage(error?: string) {
     "cannot-delete-course": "ลบคอร์สไม่ได้ เพราะยังอยู่ในแพ็กเกจหรือมี enrollment แล้ว",
     "cannot-delete-package": "ลบแพ็กเกจไม่ได้ เพราะมีออเดอร์อ้างอิงอยู่",
     "not-found": "ไม่พบข้อมูลที่ต้องการแก้ไข",
+    "invalid-pay-time-config": "ข้อมูล Pay Time ไม่ถูกต้อง",
+    "invalid-pay-time-price": "กรุณากรอกราคา Pay Time เป็นจำนวนเงินที่มากกว่าหรือเท่ากับ 0",
+    "invalid-pay-time-hours":
+      "กรุณากรอกจำนวนชั่วโมง Pay Time เป็นจำนวนเต็มระหว่าง 1 ถึง 720 ชั่วโมง",
   };
 
   return error ? messages[error] ?? "บันทึกข้อมูลไม่สำเร็จ" : null;
@@ -91,6 +95,7 @@ export async function getAdminCourseEdit(courseId: string) {
           },
         },
       },
+      // Pay Time fields are included by default on Lesson, no extra select needed.
       packageItems: {
         include: {
           coursePackage: {

@@ -219,6 +219,82 @@ const translations = {
     th: "ระบบซ่อนหน้าจอเมื่อแอปไม่อยู่หน้าแรกหรือมีคำสั่งพิมพ์ เป็นมาตรการลดความเสี่ยงเท่านั้น ไม่ใช่การป้องกันภาพหน้าจอหรือการอัดหน้าจอทั้งหมด",
     en: "The player hides while the app is inactive or print is requested. This is best-effort deterrence, not complete screenshot or recording prevention",
   },
+  payTimeTitle: {
+    th: "ซื้อเวลาดูเพิ่ม",
+    en: "Buy more viewing time",
+  },
+  payTimeBuyCta: {
+    th: "ซื้อเวลาดูเพิ่ม",
+    en: "Buy viewing time",
+  },
+  payTimePending: {
+    th: "รอตรวจสอบ",
+    en: "Pending review",
+  },
+  payTimeApproved: {
+    th: "อนุมัติแล้ว",
+    en: "Approved",
+  },
+  payTimeRejected: {
+    th: "ถูกปฏิเสธ",
+    en: "Rejected",
+  },
+  payTimePriceLabel: {
+    th: "ราคา",
+    en: "Price",
+  },
+  payTimeHoursLabel: {
+    th: "เวลาที่ได้รับ",
+    en: "Hours granted",
+  },
+  payTimeBankInfo: {
+    th: "ธนาคารกรุงไทย • 000-0-00000-0 • WePlus Online Academy",
+    en: "Krungthai • 000-0-00000-0 • WePlus Online Academy",
+  },
+  payTimePickSlip: {
+    th: "เลือกสลิปจากเครื่อง",
+    en: "Pick slip image",
+  },
+  payTimeSubmit: {
+    th: "ส่งคำสั่งซื้อ",
+    en: "Submit order",
+  },
+  payTimeSubmitting: {
+    th: "กำลังส่งคำสั่งซื้อ",
+    en: "Submitting",
+  },
+  payTimeBackToLesson: {
+    th: "กลับไปดูบทเรียน",
+    en: "Back to lesson",
+  },
+  payTimeRemaining: {
+    th: "เวลาเหลือ",
+    en: "Time remaining",
+  },
+  payTimeStatusHeading: {
+    th: "สถานะคำสั่งซื้อ Pay Time",
+    en: "Pay Time order status",
+  },
+  payTimeErrorMissingSlip: {
+    th: "กรุณาเลือกไฟล์สลิป",
+    en: "Please pick a slip image",
+  },
+  payTimeErrorPermission: {
+    th: "ต้องอนุญาตเข้าถึงรูปภาพก่อนถึงจะเลือกสลิปได้",
+    en: "Allow image library access to pick the slip",
+  },
+  payTimeSubmitted: {
+    th: "ส่งคำขอเรียบร้อย รอตรวจสอบสลิป",
+    en: "Order submitted, waiting for review",
+  },
+  payTimeRefresh: {
+    th: "รีเฟรชสถานะ",
+    en: "Refresh status",
+  },
+  payTimeNotEligible: {
+    th: "บทเรียนนี้ยังไม่เปิดให้ซื้อเวลาดู",
+    en: "Pay Time is not available for this lesson",
+  },
 } satisfies Record<string, Record<Language, string>>;
 
 export type TranslationKey = keyof typeof translations;
