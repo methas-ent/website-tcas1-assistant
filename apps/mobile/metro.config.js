@@ -11,6 +11,13 @@ config.watchFolders = [
   path.resolve(workspaceRoot, "packages/api-client"),
 ];
 
+// Expo CLI defaults `serverRoot` to `projectRoot` (apps/mobile), but the
+// manifest URL it sends to Expo Go is workspace-relative (`/apps/mobile/index.bundle`).
+// Pin serverRoot to workspaceRoot so the URL Expo Go fetches resolves to the
+// correct file under workspace root, not a doubled `apps/mobile/apps/mobile/index`.
+config.server = config.server ?? {};
+config.server.unstable_serverRoot = workspaceRoot;
+
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(workspaceRoot, "node_modules"),
