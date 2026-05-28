@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { AdminDeleteConfirmForm } from "@/components/admin/AdminDeleteConfirmForm";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { ChapterLessonsBoard } from "@/components/admin/ChapterLessonsBoard";
 import { Badge } from "@/components/ui/Badge";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import {
@@ -15,13 +16,10 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import {
   createChapterAction,
-  createLessonAction,
   deleteCourseAction,
   updateChapterAction,
   updateCourseAction,
-  updateLessonAction,
 } from "@/lib/admin-catalog-actions";
-import { updateLessonPayTimeConfigAction } from "@/lib/admin-pay-time-actions";
 import {
   formatThaiBahtFromCents,
   getAdminCatalogErrorMessage,
@@ -385,320 +383,92 @@ export default async function EditCoursePage({
                   </span>
                 </summary>
 
-                <div className="border-t border-line p-5">
-                  <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-                    <Card variant="soft" padding="sm">
-                      <CardHeader>
-                        <CardTitle className="text-base">
-                          ตั้งค่า Chapter
-                        </CardTitle>
-                        <CardDescription>
-                          เปลี่ยนชื่อ คำอธิบาย ลำดับ และสถานะ
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <form action={updateChapterAction} className="grid gap-3">
-                          <input name="courseId" type="hidden" value={course.id} />
-                          <input name="chapterId" type="hidden" value={chapter.id} />
+                <div className="grid gap-4 border-t border-line p-5">
+                  <Card variant="soft" padding="sm">
+                    <CardHeader>
+                      <CardTitle className="text-base">
+                        ตั้งค่า Chapter
+                      </CardTitle>
+                      <CardDescription>
+                        เปลี่ยนชื่อ คำอธิบาย ลำดับ และสถานะ
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <form action={updateChapterAction} className="grid gap-3">
+                        <input name="courseId" type="hidden" value={course.id} />
+                        <input name="chapterId" type="hidden" value={chapter.id} />
+                        <Input
+                          defaultValue={chapter.title}
+                          label="ชื่อ Chapter"
+                          name="title"
+                          required
+                          size="sm"
+                        />
+                        <Input
+                          defaultValue={chapter.description ?? ""}
+                          label="คำอธิบาย"
+                          name="description"
+                          size="sm"
+                        />
+                        <div className="grid gap-3 sm:grid-cols-[120px_1fr] sm:items-end">
                           <Input
-                            defaultValue={chapter.title}
-                            label="ชื่อ Chapter"
-                            name="title"
-                            required
+                            defaultValue={chapter.sortOrder}
+                            label="ลำดับ"
+                            min="1"
+                            name="sortOrder"
                             size="sm"
+                            type="number"
                           />
-                          <Input
-                            defaultValue={chapter.description ?? ""}
-                            label="คำอธิบาย"
-                            name="description"
-                            size="sm"
-                          />
-                          <div className="grid gap-3 sm:grid-cols-[120px_1fr] sm:items-end">
-                            <Input
-                              defaultValue={chapter.sortOrder}
-                              label="ลำดับ"
-                              min="1"
-                              name="sortOrder"
-                              size="sm"
-                              type="number"
-                            />
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                              {checkboxLabel({
-                                name: "isPublished",
-                                label: "เผยแพร่",
-                                defaultChecked: chapter.isPublished,
-                              })}
-                              <Button size="sm" type="submit" variant="outline">
-                                บันทึก Chapter
-                              </Button>
-                            </div>
-                          </div>
-                        </form>
-                      </CardContent>
-                    </Card>
-
-                    <Card variant="soft" padding="sm">
-                      <CardHeader>
-                        <CardTitle className="text-base">
-                          เพิ่ม Lesson
-                        </CardTitle>
-                        <CardDescription>
-                          เพิ่มบทเรียนใหม่และเลือก VDO ที่อัปโหลดไว้แล้ว
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <form action={createLessonAction} className="grid gap-3">
-                          <input name="courseId" type="hidden" value={course.id} />
-                          <input name="chapterId" type="hidden" value={chapter.id} />
-                          <Input
-                            label="ชื่อ Lesson"
-                            name="title"
-                            required
-                            size="sm"
-                          />
-                          <Textarea
-                            label="คำอธิบาย Lesson"
-                            name="description"
-                            rows={3}
-                          />
-                          <div className="grid gap-3 md:grid-cols-[100px_130px_1fr]">
-                            <Input
-                              defaultValue={chapter.lessons.length + 1}
-                              label="ลำดับ"
-                              min="1"
-                              name="sortOrder"
-                              size="sm"
-                              type="number"
-                            />
-                            <Input
-                              label="วินาที"
-                              min="0"
-                              name="durationSeconds"
-                              size="sm"
-                              type="number"
-                            />
-                            <Select label="เลือก VDO" name="videoAssetId" size="sm">
-                              <option value="">ยังไม่เลือกวิดีโอ</option>
-                              {videoAssets.map((asset) => (
-                                <option key={asset.id} value={asset.id}>
-                                  {asset.title} ({asset.status})
-                                </option>
-                              ))}
-                            </Select>
-                          </div>
                           <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div className="flex flex-wrap gap-4">
-                              {checkboxLabel({
-                                name: "isPreview",
-                                label: "ตัวอย่าง",
-                                compact: true,
-                              })}
-                              {checkboxLabel({
-                                name: "isPublished",
-                                label: "เผยแพร่",
-                                compact: true,
-                              })}
-                            </div>
-                            <Button size="sm" type="submit">
-                              เพิ่ม Lesson
+                            {checkboxLabel({
+                              name: "isPublished",
+                              label: "เผยแพร่",
+                              defaultChecked: chapter.isPublished,
+                            })}
+                            <Button size="sm" type="submit" variant="outline">
+                              บันทึก Chapter
                             </Button>
                           </div>
-                        </form>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <div className="mt-5 grid gap-3">
-                    {chapter.lessons.length ? (
-                      chapter.lessons.map((lesson) => (
-                        <div
-                          className="rounded-2xl border border-line bg-surface-soft p-4"
-                          key={lesson.id}
-                        >
-                          <form action={updateLessonAction}>
-                            <input
-                              name="courseId"
-                              type="hidden"
-                              value={course.id}
-                            />
-                            <input
-                              name="lessonId"
-                              type="hidden"
-                              value={lesson.id}
-                            />
-                            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_100px_120px_minmax(220px,0.8fr)_auto]">
-                              <div>
-                                <Input
-                                  defaultValue={lesson.title}
-                                  label="ชื่อ Lesson"
-                                  name="title"
-                                  required
-                                  size="sm"
-                                />
-                                <details className="mt-3">
-                                  <summary className="cursor-pointer text-xs font-bold text-primary-700">
-                                    แก้คำอธิบาย
-                                  </summary>
-                                  <Textarea
-                                    className="mt-2"
-                                    defaultValue={lesson.description ?? ""}
-                                    label="คำอธิบาย Lesson"
-                                    name="description"
-                                    rows={3}
-                                  />
-                                </details>
-                              </div>
-                              <Input
-                                defaultValue={lesson.sortOrder}
-                                label="ลำดับ"
-                                min="1"
-                                name="sortOrder"
-                                size="sm"
-                                type="number"
-                              />
-                              <Input
-                                defaultValue={lesson.durationSeconds ?? ""}
-                                label="วินาที"
-                                min="0"
-                                name="durationSeconds"
-                                size="sm"
-                                type="number"
-                              />
-                              <div>
-                                <Select
-                                  defaultValue={lesson.videoAssetId ?? ""}
-                                  label="VDO"
-                                  name="videoAssetId"
-                                  size="sm"
-                                >
-                                  <option value="">ยังไม่เลือกวิดีโอ</option>
-                                  {videoAssets.map((asset) => (
-                                    <option key={asset.id} value={asset.id}>
-                                      {asset.title} ({asset.status})
-                                    </option>
-                                  ))}
-                                </Select>
-                                <div className="mt-2">
-                                  {lesson.videoAsset ? (
-                                    <Badge
-                                      variant={
-                                        lesson.videoAsset.status === "READY"
-                                          ? "success"
-                                          : "warning"
-                                      }
-                                    >
-                                      {lesson.videoAsset.status}
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="warning">ยังไม่มี VDO</Badge>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex flex-col justify-end gap-2">
-                                {checkboxLabel({
-                                  name: "isPreview",
-                                  label: "ตัวอย่าง",
-                                  defaultChecked: lesson.isPreview,
-                                  compact: true,
-                                })}
-                                {checkboxLabel({
-                                  name: "isPublished",
-                                  label: "เผยแพร่",
-                                  defaultChecked: lesson.isPublished,
-                                  compact: true,
-                                })}
-                                <Button size="sm" type="submit" variant="outline">
-                                  บันทึก
-                                </Button>
-                              </div>
-                            </div>
-                          </form>
-
-                          <details className="mt-4 border-t border-dashed border-line pt-3">
-                            <summary className="cursor-pointer text-xs font-bold text-primary-700">
-                              ตั้งค่า Pay Time (ขยายเวลาดู VDO)
-                              {lesson.payTimeEnabled ? (
-                                <span className="ml-2 inline-flex">
-                                  <Badge variant="success" size="sm">
-                                    เปิดอยู่
-                                  </Badge>
-                                </span>
-                              ) : (
-                                <span className="ml-2 inline-flex">
-                                  <Badge variant="neutral" size="sm">
-                                    ปิดอยู่
-                                  </Badge>
-                                </span>
-                              )}
-                            </summary>
-                            <form
-                              action={updateLessonPayTimeConfigAction}
-                              className="mt-3 grid gap-3"
-                            >
-                              <input
-                                name="lessonId"
-                                type="hidden"
-                                value={lesson.id}
-                              />
-                              <p className="text-xs text-ink-muted">
-                                Pay Time ให้นักเรียนจ่ายเพื่อขยายเวลาดู VDO เฉพาะบทเรียนนี้
-                                ระบบจะตรวจสลิปก่อนเปิดสิทธิ์
-                              </p>
-                              <div className="grid gap-3 md:grid-cols-[auto_1fr_1fr]">
-                                <label className="inline-flex items-end gap-2 text-sm font-bold text-ink">
-                                  <input
-                                    className="h-4 w-4 rounded border-line text-primary"
-                                    defaultChecked={lesson.payTimeEnabled}
-                                    name="payTimeEnabled"
-                                    type="checkbox"
-                                    value="true"
-                                  />
-                                  <span className="text-xs">เปิดใช้งาน</span>
-                                </label>
-                                <Input
-                                  defaultValue={formatThaiBahtFromCents(
-                                    lesson.payTimePriceCents,
-                                  )}
-                                  label="ราคา (บาท)"
-                                  min="0"
-                                  name="payTimePrice"
-                                  size="sm"
-                                  step="1"
-                                  type="number"
-                                />
-                                <Input
-                                  defaultValue={lesson.payTimeHours}
-                                  hint="1 - 720 ชั่วโมง"
-                                  label="ระยะเวลา (ชั่วโมง)"
-                                  max="720"
-                                  min="1"
-                                  name="payTimeHours"
-                                  size="sm"
-                                  step="1"
-                                  type="number"
-                                />
-                              </div>
-                              <Textarea
-                                defaultValue={lesson.payTimeDescription ?? ""}
-                                label="คำอธิบายสำหรับนักเรียน (ไม่บังคับ)"
-                                name="payTimeDescription"
-                                placeholder="เช่น ขยายเวลาดู VDO ได้ 24 ชั่วโมง"
-                                rows={2}
-                              />
-                              <div className="flex justify-end">
-                                <Button size="sm" type="submit">
-                                  บันทึก Pay Time
-                                </Button>
-                              </div>
-                            </form>
-                          </details>
                         </div>
-                      ))
-                    ) : (
-                      <p className="rounded-card border border-dashed border-line p-4 text-center text-sm text-ink-muted">
-                        ยังไม่มี lesson ใน chapter นี้
-                      </p>
-                    )}
+                      </form>
+                    </CardContent>
+                  </Card>
+
+                  <div className="grid gap-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-black uppercase tracking-[0.18em] text-primary-700">
+                        บทเรียน
+                      </h4>
+                      <span className="text-xs font-semibold text-ink-muted">
+                        {chapter.lessons.length} ตอน · ลากเพื่อจัดลำดับ
+                      </span>
+                    </div>
+                    <ChapterLessonsBoard
+                      chapterId={chapter.id}
+                      courseId={course.id}
+                      lessons={chapter.lessons.map((lesson) => ({
+                        id: lesson.id,
+                        title: lesson.title,
+                        description: lesson.description,
+                        sortOrder: lesson.sortOrder,
+                        epNumber: lesson.epNumber,
+                        durationSeconds: lesson.durationSeconds,
+                        videoAssetId: lesson.videoAssetId,
+                        isPreview: lesson.isPreview,
+                        isPublished: lesson.isPublished,
+                        payTimeEnabled: lesson.payTimeEnabled,
+                        payTimePriceCents: lesson.payTimePriceCents,
+                        payTimeHours: lesson.payTimeHours,
+                        payTimeDescription: lesson.payTimeDescription,
+                        videoAsset: lesson.videoAsset
+                          ? {
+                              id: lesson.videoAsset.id,
+                              title: lesson.videoAsset.title,
+                              status: lesson.videoAsset.status,
+                            }
+                          : null,
+                      }))}
+                    />
                   </div>
                 </div>
               </details>

@@ -1314,6 +1314,92 @@ export async function updateLessonAction(formData: FormData) {
   redirect(`/admin/courses/${courseId}/edit?saved=lesson`);
 }
 
+/**
+ * Reorder lessons inside a chapter.
+ *
+ * FormData contract:
+ *  - courseId: string
+ *  - chapterId: string
+ *  - orderedLessonIds: JSON-encoded string[]   (e.g. '["abc","def","ghi"]')
+ *
+ * The new sortOrder/epNumber for each lesson is derived from its position in
+ * the array: index 0 -> sortOrder 0, epNumber 1, etc.
+ *
+ * Uses a two-pass transaction to dodge the @@unique([chapterId, epNumber])
+ * constraint: first park every affected lesson at a temporary negative
+ * epNumber, then set the final values.
+ */
+export async function reorderLessonsAction(formData: FormData) {
+  const courseId = text(formData, "courseId");
+  const chapterId = text(formData, "chapterId");
+  await requireAdmin(`/admin/courses/${courseId}/edit`);
+
+  const redirectPath = `/admin/courses/${courseId}/edit`;
+  const rawIds = text(formData, "orderedLessonIds");
+
+  let orderedIds: unknown;
+  try {
+    orderedIds = JSON.parse(rawIds);
+  } catch {
+    validationRedirect(redirectPath, "invalid-lesson");
+  }
+
+  if (
+    !courseId ||
+    !chapterId ||
+    !Array.isArray(orderedIds) ||
+    orderedIds.length === 0 ||
+    !orderedIds.every((id) => typeof id === "string" && id.length > 0) ||
+    !(await ensureChapterBelongsToCourse(chapterId, courseId))
+  ) {
+    validationRedirect(redirectPath, "invalid-lesson");
+  }
+
+  const lessonIds = orderedIds as string[];
+  const uniqueIds = new Set(lessonIds);
+
+  if (uniqueIds.size !== lessonIds.length) {
+    validationRedirect(redirectPath, "invalid-lesson");
+  }
+
+  const existingLessons = await prisma.lesson.findMany({
+    where: { chapterId, courseId, id: { in: lessonIds } },
+    select: { id: true },
+  });
+
+  if (existingLessons.length !== lessonIds.length) {
+    validationRedirect(redirectPath, "invalid-lesson");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // Pass 1: temporarily move lessons to negative epNumber values so the
+    // unique [chapterId, epNumber] constraint isn't violated during reorder.
+    for (let i = 0; i < lessonIds.length; i += 1) {
+      await tx.lesson.update({
+        where: { id: lessonIds[i] },
+        data: {
+          sortOrder: -(i + 1),
+          epNumber: -(i + 1),
+        },
+      });
+    }
+
+    // Pass 2: assign final ordering.
+    for (let i = 0; i < lessonIds.length; i += 1) {
+      await tx.lesson.update({
+        where: { id: lessonIds[i] },
+        data: {
+          sortOrder: i,
+          epNumber: i + 1,
+        },
+      });
+    }
+  });
+
+  revalidatePath(redirectPath);
+  redirect(`${redirectPath}?saved=lesson-order`);
+}
+
 export async function createPackageAction(formData: FormData) {
   await requireAdmin("/admin/packages/new");
 
