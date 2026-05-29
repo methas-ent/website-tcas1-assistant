@@ -1,10 +1,10 @@
 // VDO Learning Platform - Full LMS MVP Prisma schema.
-// Datasource: SQLite for local development.
+// Datasource: PostgreSQL (Railway / hosted) — local dev may point DATABASE_URL
+// at a Postgres instance via Docker or a managed dev DB.
 //
-// SQLite enum note:
-// SQLite has no native enum support in Prisma. Enum-like fields are stored as
-// String columns, with allowed values documented above each field. Validate
-// them in server-side application code before writes.
+// Enum-like fields are kept as String columns (carried over from the SQLite
+// baseline) and validated in server-side application code before writes. They
+// can be promoted to native Postgres enums in a future migration.
 //
 // Security notes:
 // - Store passwords only as passwordHash values.
@@ -18,7 +18,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
