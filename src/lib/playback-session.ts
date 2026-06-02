@@ -1,8 +1,8 @@
 import {
   authorizeLessonPlayback,
-  createPlaybackToken,
   getPlaybackErrorMessage,
 } from "@/lib/secure-playback";
+import { resolvePlaybackSource } from "@/lib/video/playback-source";
 import type { CurrentUser } from "@/lib/auth";
 import prisma from "@/lib/db";
 
@@ -170,7 +170,7 @@ export async function issuePlaybackTokenForSession(
     } as const;
   }
 
-  const { token, expiresAt } = createPlaybackToken({
+  const source = resolvePlaybackSource(videoAsset, {
     sessionId,
     userId: result.session.userId!,
     lessonId: result.session.lessonId,
@@ -178,11 +178,12 @@ export async function issuePlaybackTokenForSession(
 
   return {
     ok: true,
-    playbackUrl: `/api/playback/stream/${encodeURIComponent(token)}`,
-    expiresAt,
+    playbackUrl: source.playbackUrl,
+    expiresAt: source.expiresAt,
     sessionId,
     lessonTitle: result.access.lesson.title,
-    mimeType: videoAsset.mimeType,
+    mimeType: source.mimeType,
+    playbackKind: source.playbackKind,
   } as const;
 }
 

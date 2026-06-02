@@ -1,8 +1,17 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
+import {
+  BUNNY_HLS_MIME_TYPE,
+  createBunnyVideo,
+  getBunnyConfig,
+  uploadBunnyVideo,
+} from "@/lib/video/bunny";
 
-export type StorageProviderName = "LOCAL" | "S3" | "R2" | "CLOUD";
+export type StorageProviderName = "LOCAL" | "BUNNY" | "S3" | "R2" | "CLOUD";
+
+/** VideoAsset.status values a provider may request right after saving. */
+export type StoredVideoStatus = "UPLOADED" | "PROCESSING" | "READY" | "FAILED";
 
 export type StoredVideoObject = {
   storageProvider: StorageProviderName;
@@ -10,6 +19,11 @@ export type StoredVideoObject = {
   originalFileName: string;
   mimeType: string;
   sizeBytes: bigint;
+  /**
+   * Status the asset should be created with. LOCAL is immediately READY;
+   * cloud providers that transcode asynchronously (BUNNY) start at PROCESSING.
+   */
+  status: StoredVideoStatus;
 };
 
 export type StorageProvider = {
@@ -138,18 +152,63 @@ export class LocalVideoStorageProvider implements StorageProvider {
       originalFileName: file.name,
       mimeType: file.type,
       sizeBytes: BigInt(file.size),
+      status: "READY",
+    };
+  }
+}
+
+/**
+ * Uploads to Bunny Stream. Bunny transcodes asynchronously, so the asset is
+ * created as PROCESSING and flipped to READY by the webhook / status sync once
+ * encoding finishes. `storageKey` holds the Bunny video GUID (never a raw URL).
+ */
+export class BunnyVideoStorageProvider implements StorageProvider {
+  provider = "BUNNY" as const;
+
+  async saveVideo(file: File): Promise<StoredVideoObject> {
+    assertValidVideoFile(file);
+
+    const videoGuid = await createBunnyVideo(file.name || "video");
+    await uploadBunnyVideo(videoGuid, await file.arrayBuffer());
+
+    return {
+      storageProvider: this.provider,
+      storageKey: videoGuid,
+      originalFileName: file.name,
+      // Playback is HLS regardless of the source container.
+      mimeType: BUNNY_HLS_MIME_TYPE,
+      sizeBytes: BigInt(file.size),
+      status: "PROCESSING",
     };
   }
 }
 
 export class PlaceholderCloudStorageProvider implements StorageProvider {
-  constructor(public provider: Exclude<StorageProviderName, "LOCAL">) {}
+  constructor(public provider: Exclude<StorageProviderName, "LOCAL" | "BUNNY">) {}
 
   async saveVideo(): Promise<StoredVideoObject> {
     throw new Error(`${this.provider} storage is planned but not implemented yet.`);
   }
 }
 
+/**
+ * Selects the active upload provider from `VIDEO_STORAGE_PROVIDER`
+ * (default LOCAL). BUNNY requires the Bunny Stream env vars to be set.
+ */
 export function getVideoStorageProvider(): StorageProvider {
+  const configured = (process.env.VIDEO_STORAGE_PROVIDER ?? "LOCAL")
+    .trim()
+    .toUpperCase();
+
+  if (configured === "BUNNY") {
+    if (!getBunnyConfig()) {
+      throw new Error(
+        "VIDEO_STORAGE_PROVIDER=BUNNY but Bunny Stream env vars are missing.",
+      );
+    }
+
+    return new BunnyVideoStorageProvider();
+  }
+
   return new LocalVideoStorageProvider();
 }

@@ -164,7 +164,8 @@ model VideoAsset {
   id    String @id @default(cuid())
   title String
 
-  // Allowed values: "LOCAL" | "S3" | "R2" | "CLOUD"
+  // Allowed values: "LOCAL" | "BUNNY" | "S3" | "R2" | "CLOUD"
+  // (LOCAL: relative path, BUNNY: Stream video GUID — never a raw URL)
   storageProvider String @default("LOCAL")
 
   // Provider/object-storage key only. Do not store raw private playback URLs.

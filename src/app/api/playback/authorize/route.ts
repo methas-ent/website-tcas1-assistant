@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
   authorizeLessonPlayback,
-  createPlaybackToken,
   getPlaybackErrorMessage,
 } from "@/lib/secure-playback";
+import { resolvePlaybackSource } from "@/lib/video/playback-source";
 import { getCurrentUserFromRequest } from "@/lib/auth";
 import prisma from "@/lib/db";
 
@@ -64,17 +64,18 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  const { token, expiresAt } = createPlaybackToken({
+  const source = resolvePlaybackSource(videoAsset, {
     sessionId: playbackSession.id,
     userId: access.user.id,
     lessonId: access.lesson.id,
   });
 
   return NextResponse.json({
-    playbackUrl: `/api/playback/stream/${encodeURIComponent(token)}`,
-    expiresAt,
+    playbackUrl: source.playbackUrl,
+    expiresAt: source.expiresAt,
     sessionId: playbackSession.id,
     lessonTitle: access.lesson.title,
-    mimeType: videoAsset.mimeType,
+    mimeType: source.mimeType,
+    playbackKind: source.playbackKind,
   });
 }

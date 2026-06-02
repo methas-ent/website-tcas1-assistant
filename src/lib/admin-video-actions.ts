@@ -166,7 +166,9 @@ export async function uploadVideoAction(formData: FormData) {
           originalFileName: stored.originalFileName,
           mimeType: stored.mimeType,
           sizeBytes: stored.sizeBytes,
-          status: "READY",
+          // LOCAL is READY immediately; cloud providers that transcode
+          // asynchronously (BUNNY) start as PROCESSING until the webhook lands.
+          status: stored.status,
           metadataJson: JSON.stringify({
             description,
             attachedLessonId: lesson?.id ?? null,

@@ -148,12 +148,20 @@ export type PayTimeOrderSlipUpdateResponse = {
   paymentSlipUploadedAt: string | null;
 };
 
+export type PlaybackKind = "hls" | "mp4";
+
 export type PlaybackAuthorizeResponse = {
   playbackUrl: string;
   expiresAt: string;
   sessionId: string;
   lessonTitle: string;
   mimeType: string;
+  /**
+   * How to play `playbackUrl`:
+   * - "hls": signed CDN manifest (Bunny Stream) — native HLS / hls.js
+   * - "mp4": progressive byte-range stream from our own /api/playback/stream route
+   */
+  playbackKind: PlaybackKind;
 };
 
 export type LessonProgressResponse = {
