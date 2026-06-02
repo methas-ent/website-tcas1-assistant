@@ -99,6 +99,10 @@ function videoUploadErrorCode(error: unknown) {
     return "invalid-course-video-size";
   }
 
+  if (code === "local-too-large") {
+    return "local-video-too-large";
+  }
+
   return "storage";
 }
 
@@ -117,10 +121,24 @@ async function videoFromUpload(
     return null;
   }
 
+  console.info("[studio-upload] video received", {
+    provider: (process.env.VIDEO_STORAGE_PROVIDER ?? "LOCAL").toUpperCase(),
+    sizeBytes: file.size,
+    mimeType: file.type,
+  });
+
   try {
-    return await getVideoStorageProvider().saveVideo(file);
+    const stored = await getVideoStorageProvider().saveVideo(file);
+    console.info("[studio-upload] video stored", {
+      provider: stored.storageProvider,
+      status: stored.status,
+    });
+    return stored;
   } catch (error) {
-    validationRedirect(redirectPath, videoUploadErrorCode(error));
+    // NOTE: validationRedirect throws NEXT_REDIRECT — must not be swallowed.
+    const code = videoUploadErrorCode(error);
+    console.error("[studio-upload] video store failed", { code });
+    validationRedirect(redirectPath, code);
   }
 }
 

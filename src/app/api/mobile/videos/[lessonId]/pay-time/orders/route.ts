@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createPayTimeOrder } from "@/lib/pay-time";
 import { getPaymentSlipErrorMessage } from "@/lib/payment-slip-storage";
 import { requireMobileStudent } from "@/lib/mobile-api";
+import { isUploadedFile } from "@/lib/uploaded-file";
 
 export const runtime = "nodejs";
 
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   const note = readString(formData.get("note"));
   const slipFile = formData.get("paymentSlip");
 
-  if (!(slipFile instanceof File) || slipFile.size <= 0) {
+  if (!isUploadedFile(slipFile)) {
     return NextResponse.json(
       { error: "MISSING_SLIP", message: "กรุณาแนบสลิปโอนเงิน" },
       { status: 400 },
