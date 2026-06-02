@@ -6,6 +6,7 @@ import {
   getPaymentSlipErrorMessage,
   savePaymentSlip,
 } from "@/lib/payment-slip-storage";
+import { isUploadedFile } from "@/lib/uploaded-file";
 
 type CheckoutRequestBody = {
   customerPhone?: unknown;
@@ -49,7 +50,7 @@ async function readCheckoutPayload(request: Request): Promise<CheckoutPayload> {
       courseIds: normalizeIds(formData.getAll("courseIds")),
       customerPhone: optionalString(formData.get("customerPhone")),
       note: optionalString(formData.get("note")),
-      paymentSlip: paymentSlip instanceof File ? paymentSlip : null,
+      paymentSlip: isUploadedFile(paymentSlip) ? paymentSlip : null,
     };
   }
 
