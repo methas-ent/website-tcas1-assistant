@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+type PlaybackKind = "hls" | "mp4";
 
 type VideoPlayerProps = {
   lessonId: string;
@@ -16,6 +18,7 @@ type PlaybackState =
       expiresAt: string;
       sessionId: string;
       mimeType: string;
+      playbackKind: PlaybackKind;
     }
   | { status: "error"; message: string };
 
@@ -34,6 +37,7 @@ async function requestPlaybackAccess(lessonId: string) {
         expiresAt?: string;
         sessionId?: string;
         mimeType?: string;
+        playbackKind?: PlaybackKind;
         message?: string;
       }
     | null;
@@ -47,6 +51,7 @@ async function requestPlaybackAccess(lessonId: string) {
     expiresAt: payload.expiresAt,
     sessionId: payload.sessionId,
     mimeType: payload.mimeType ?? "video/mp4",
+    playbackKind: payload.playbackKind === "hls" ? ("hls" as const) : ("mp4" as const),
   };
 }
 
@@ -64,6 +69,7 @@ async function signalPlaybackSession(
 export function VideoPlayer({ lessonId, title, userLabel }: VideoPlayerProps) {
   const [now, setNow] = useState(() => new Date());
   const [playback, setPlayback] = useState<PlaybackState>({ status: "loading" });
+  const videoRef = useRef<HTMLVideoElement>(null);
   const sessionCode = useMemo(() => lessonId.slice(-6).toUpperCase(), [lessonId]);
 
   useEffect(() => {
@@ -131,12 +137,61 @@ export function VideoPlayer({ lessonId, title, userLabel }: VideoPlayerProps) {
     };
   }, [playback]);
 
+  // Attach the playback source to the <video> element. MP4 sets src directly;
+  // HLS uses native playback on Safari and falls back to hls.js elsewhere.
+  useEffect(() => {
+    const video = videoRef.current;
+
+    if (!video || playback.status !== "ready") {
+      return;
+    }
+
+    if (playback.playbackKind !== "hls") {
+      video.src = playback.playbackUrl;
+      return;
+    }
+
+    const canPlayNativeHls = video.canPlayType("application/vnd.apple.mpegurl");
+
+    if (canPlayNativeHls) {
+      video.src = playback.playbackUrl;
+      return;
+    }
+
+    let cancelled = false;
+    let hls: import("hls.js").default | null = null;
+
+    void import("hls.js").then(({ default: Hls }) => {
+      if (cancelled) {
+        return;
+      }
+
+      if (!Hls.isSupported()) {
+        setPlayback({
+          status: "error",
+          message: "เบราว์เซอร์นี้ไม่รองรับการเล่นวิดีโอ HLS",
+        });
+        return;
+      }
+
+      hls = new Hls({ maxBufferLength: 30 });
+      hls.loadSource(playback.playbackUrl);
+      hls.attachMedia(video);
+    });
+
+    return () => {
+      cancelled = true;
+      hls?.destroy();
+    };
+  }, [playback]);
+
   return (
     <section className="overflow-hidden rounded-2xl border border-primary-100 bg-ink text-white shadow-card">
       <div className="relative aspect-video bg-gradient-to-br from-ink via-primary-900 to-primary-700">
         {playback.status === "ready" ? (
           <video
             key={playback.playbackUrl}
+            ref={videoRef}
             aria-label={title}
             className="h-full w-full bg-black"
             controls
@@ -145,7 +200,6 @@ export function VideoPlayer({ lessonId, title, userLabel }: VideoPlayerProps) {
             onContextMenu={(event) => event.preventDefault()}
             preload="metadata"
           >
-            <source src={playback.playbackUrl} type={playback.mimeType} />
             เบราว์เซอร์นี้ไม่รองรับการเล่นวิดีโอ
           </video>
         ) : (

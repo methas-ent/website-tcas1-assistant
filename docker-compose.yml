@@ -1,0 +1,27 @@
+# Local development PostgreSQL (dev now uses the same provider as production).
+# Usage:
+#   docker compose up -d
+#   # then in .env:  DATABASE_URL="postgresql://vdo:vdo@localhost:5432/vdo?schema=public"
+#   npm run db:migrate   # apply migrations to the local DB
+#   npm run db:seed      # load idempotent QA data
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vdo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vdo
+      POSTGRES_PASSWORD: vdo
+      POSTGRES_DB: vdo
+    ports:
+      - "5432:5432"
+    volumes:
+      - vdo-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vdo -d vdo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  vdo-pgdata:

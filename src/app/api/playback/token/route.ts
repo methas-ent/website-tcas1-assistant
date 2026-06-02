@@ -40,5 +40,6 @@ export async function POST(request: NextRequest) {
     sessionId: result.sessionId,
     lessonTitle: result.lessonTitle,
     mimeType: result.mimeType,
+    playbackKind: result.playbackKind,
   });
 }

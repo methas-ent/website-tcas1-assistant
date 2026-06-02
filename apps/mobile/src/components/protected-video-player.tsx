@@ -296,10 +296,13 @@ export function ProtectedVideoPlayer({
       return null;
     }
 
+    const isHls = playback.playbackKind === "hls";
+    const contentType = isHls ? "hls" : "progressive";
+
     if (Platform.OS === "web") {
       return {
         uri: api.resolveUrl(playback.playbackUrl),
-        contentType: "progressive",
+        contentType,
         metadata: {
           title: playback.lessonTitle,
           artist: "Knowledge Academy",
@@ -310,10 +313,13 @@ export function ProtectedVideoPlayer({
 
     return {
       uri: api.resolveUrl(playback.playbackUrl),
-      contentType: "progressive",
-      headers: {
-        Authorization: `Bearer ${session.sessionToken}`,
-      },
+      contentType,
+      // HLS plays directly from the Bunny CDN with the token baked into the URL.
+      // Never forward our session bearer to a third-party CDN — only the LOCAL
+      // progressive stream goes through our own origin.
+      ...(isHls
+        ? {}
+        : { headers: { Authorization: `Bearer ${session.sessionToken}` } }),
       metadata: {
         title: playback.lessonTitle,
         artist: "Knowledge Academy",
