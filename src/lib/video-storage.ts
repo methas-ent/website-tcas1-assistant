@@ -50,6 +50,40 @@ export function getVideoUploadMaxBytes() {
     : 500 * 1024 * 1024;
 }
 
+/**
+ * Hard cap for LOCAL uploads. LOCAL buffers the whole file in memory inside a
+ * Server Action and writes it to the (ephemeral) container disk — large files
+ * OOM small Railway instances and the request dies with the UI stuck on
+ * "saving". Keep LOCAL small; use BUNNY for real/large videos. Default 50 MB.
+ */
+export function getLocalVideoMaxBytes() {
+  const configured = Number.parseInt(
+    process.env.LOCAL_VIDEO_MAX_BYTES ?? "",
+    10,
+  );
+
+  return Number.isFinite(configured) && configured > 0
+    ? configured
+    : 50 * 1024 * 1024;
+}
+
+/**
+ * The size limit that should actually be advertised to the uploader, given the
+ * active provider. LOCAL is capped tighter so the browser rejects oversized
+ * files BEFORE uploading (no server round-trip, no OOM, clear message).
+ */
+export function getEffectiveVideoUploadMaxBytes() {
+  const provider = (process.env.VIDEO_STORAGE_PROVIDER ?? "LOCAL")
+    .trim()
+    .toUpperCase();
+
+  if (provider === "LOCAL") {
+    return Math.min(getVideoUploadMaxBytes(), getLocalVideoMaxBytes());
+  }
+
+  return getVideoUploadMaxBytes();
+}
+
 export function getVideoUploadErrorMessage(error?: string) {
   const messages: Record<string, string> = {
     invalid: "กรุณาเลือกหมวดวิชา คอร์ส ชื่อวิดีโอ และไฟล์วิดีโอให้ครบ",
@@ -136,15 +170,41 @@ export class LocalVideoStorageProvider implements StorageProvider {
   async saveVideo(file: File): Promise<StoredVideoObject> {
     assertValidVideoFile(file);
 
+    // Fail fast (defense in depth alongside the client cap) so a large file
+    // never gets buffered into memory + written to ephemeral disk on Railway.
+    const localMax = getLocalVideoMaxBytes();
+    if (file.size > localMax) {
+      console.error("[video-upload] local file exceeds cap", {
+        sizeBytes: file.size,
+        limitBytes: localMax,
+      });
+      throw new Error("local-too-large");
+    }
+
     const now = new Date();
     const year = String(now.getFullYear());
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const storageKey = [year, month, `${randomUUID()}${safeExtension(file.name)}`].join("/");
     const targetPath = path.join(localStorageRoot(), storageKey);
-    const bytes = Buffer.from(await file.arrayBuffer());
 
-    await mkdir(path.dirname(targetPath), { recursive: true });
-    await writeFile(targetPath, bytes);
+    console.info("[video-upload] local write start", {
+      storageKey,
+      sizeBytes: file.size,
+    });
+
+    try {
+      const bytes = Buffer.from(await file.arrayBuffer());
+      await mkdir(path.dirname(targetPath), { recursive: true });
+      await writeFile(targetPath, bytes);
+    } catch (error) {
+      console.error("[video-upload] local write failed", {
+        storageKey,
+        message: error instanceof Error ? error.message : "unknown",
+      });
+      throw new Error("storage");
+    }
+
+    console.info("[video-upload] local write ok", { storageKey });
 
     return {
       storageProvider: this.provider,
@@ -168,8 +228,18 @@ export class BunnyVideoStorageProvider implements StorageProvider {
   async saveVideo(file: File): Promise<StoredVideoObject> {
     assertValidVideoFile(file);
 
-    const videoGuid = await createBunnyVideo(file.name || "video");
-    await uploadBunnyVideo(videoGuid, await file.arrayBuffer());
+    console.info("[video-upload] bunny upload start", { sizeBytes: file.size });
+    let videoGuid: string;
+    try {
+      videoGuid = await createBunnyVideo(file.name || "video");
+      await uploadBunnyVideo(videoGuid, await file.arrayBuffer());
+    } catch (error) {
+      console.error("[video-upload] bunny upload failed", {
+        message: error instanceof Error ? error.message : "unknown",
+      });
+      throw new Error("storage");
+    }
+    console.info("[video-upload] bunny upload ok", { videoGuid });
 
     return {
       storageProvider: this.provider,

@@ -7,8 +7,8 @@ import { requireAdmin } from "@/lib/admin";
 import { getAdminCatalogErrorMessage } from "@/lib/admin-catalog";
 import { createStudioContentAction } from "@/lib/admin-catalog-actions";
 import {
+  getEffectiveVideoUploadMaxBytes,
   getVideoUploadErrorMessage,
-  getVideoUploadMaxBytes,
 } from "@/lib/video-storage";
 
 type AdminVideosPageProps = {
@@ -24,7 +24,9 @@ export default async function AdminVideosPage({
 }: AdminVideosPageProps) {
   await requireAdmin("/admin/videos");
 
-  const maxVideoBytes = getVideoUploadMaxBytes();
+  // Provider-aware cap: LOCAL is capped tighter so the browser rejects oversized
+  // files before uploading (prevents the stuck "saving" / OOM on Railway LOCAL).
+  const maxVideoBytes = getEffectiveVideoUploadMaxBytes();
   const error =
     getAdminCatalogErrorMessage(searchParams?.error) ??
     getVideoUploadErrorMessage(searchParams?.error);
