@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
@@ -54,6 +55,19 @@ export function CheckoutClient({
 }: CheckoutClientProps) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [state, setState] = useState<CheckoutState>({ status: "idle" });
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  async function copyToClipboard(field: string, value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedField(field);
+      window.setTimeout(() => {
+        setCopiedField((current) => (current === field ? null : current));
+      }, 1500);
+    } catch {
+      // คัดลอกไม่สำเร็จ — ผู้ใช้สามารถคัดลอกด้วยตนเองได้
+    }
+  }
 
   useEffect(() => {
     setCartItems(readCartItems());
@@ -200,6 +214,96 @@ export function CheckoutClient({
               name="note"
               placeholder="แจ้งรายละเอียดการโอน หรือคำถามเพิ่มเติม"
             />
+          </div>
+        </Card>
+
+        <Card className="overflow-hidden" padding="none">
+          <div className="bg-gradient-to-r from-[#0b3d91] to-[#0b3d91] px-6 py-4 text-white">
+            <p className="text-xs font-bold uppercase tracking-wide text-white/80">
+              Thai QR Payment
+            </p>
+            <p className="font-heading text-lg font-bold">
+              PromptPay (พร้อมเพย์)
+            </p>
+            <p className="mt-0.5 text-xs text-white/80">
+              รับเงินได้จากทุกธนาคาร
+            </p>
+          </div>
+          <div className="grid gap-5 p-6">
+            <div>
+              <h2 className="font-heading text-xl font-bold text-ink">
+                สแกน QR เพื่อโอนเงิน 💳
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-ink-muted">
+                สแกน QR ด้วยแอปธนาคารใดก็ได้ แล้วแนบสลิปด้านล่างเพื่อยืนยัน
+              </p>
+            </div>
+
+            <div className="flex flex-col items-center gap-3">
+              <div className="rounded-2xl border-2 border-dashed border-primary-300 bg-white p-3 shadow-sm">
+                <Image
+                  alt="Thai QR Payment PromptPay"
+                  className="h-56 w-56 rounded-xl bg-white object-contain"
+                  height={224}
+                  src="/payment/k-plus-payment.jpg"
+                  unoptimized
+                  width={224}
+                />
+              </div>
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-4 py-1.5 text-sm font-bold text-primary-700">
+                ยอดที่ต้องโอน {formatPrice(totalCents, currency)}
+              </span>
+            </div>
+
+            <div className="rounded-2xl border border-line bg-surface-soft">
+              <p className="border-b border-line px-4 py-3 text-sm font-bold text-ink-soft">
+                ข้อมูลบัญชีปลายทาง
+              </p>
+              <div className="divide-y divide-line">
+                <div className="flex items-center justify-between gap-3 px-4 py-3">
+                  <span className="text-sm text-ink-muted">ชื่อบัญชี</span>
+                  <span className="text-right text-sm font-bold text-ink">
+                    น.ส. ศรัญญา ชุ่มธิ
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 px-4 py-3">
+                  <span className="text-sm text-ink-muted">เลขที่บัญชี</span>
+                  <span className="flex items-center gap-2 text-right text-sm font-bold text-ink">
+                    xxx-x-x5222-x
+                    <button
+                      aria-label="คัดลอกเลขที่บัญชี"
+                      className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-bold text-primary-700 transition hover:bg-primary-100"
+                      onClick={() =>
+                        void copyToClipboard("account", "xxx-x-x5222-x")
+                      }
+                      type="button"
+                    >
+                      {copiedField === "account" ? "คัดลอกแล้ว ✓" : "คัดลอก"}
+                    </button>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 px-4 py-3">
+                  <span className="text-sm text-ink-muted">
+                    เลขที่อ้างอิง
+                  </span>
+                  <span className="flex items-center gap-2 text-right text-sm font-bold text-ink">
+                    004999182657881
+                    <button
+                      aria-label="คัดลอกเลขที่อ้างอิง"
+                      className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-bold text-primary-700 transition hover:bg-primary-100"
+                      onClick={() =>
+                        void copyToClipboard("reference", "004999182657881")
+                      }
+                      type="button"
+                    >
+                      {copiedField === "reference"
+                        ? "คัดลอกแล้ว ✓"
+                        : "คัดลอก"}
+                    </button>
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </Card>
 
