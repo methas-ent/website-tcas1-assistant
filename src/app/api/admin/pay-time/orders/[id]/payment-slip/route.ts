@@ -1,8 +1,7 @@
-import { readFile } from "node:fs/promises";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import prisma from "@/lib/db";
-import { resolveLocalPaymentSlipPath } from "@/lib/payment-slip-storage";
+import { readPaymentSlipBytes } from "@/lib/payment-slip-storage";
 
 type PayTimePaymentSlipRouteProps = {
   params: {
@@ -41,13 +40,9 @@ export async function GET(
     );
   }
 
-  let bytes: Buffer;
+  const bytes = await readPaymentSlipBytes(order.paymentSlipStorageKey);
 
-  try {
-    bytes = await readFile(
-      resolveLocalPaymentSlipPath(order.paymentSlipStorageKey),
-    );
-  } catch {
+  if (!bytes) {
     return NextResponse.json(
       { error: "Payment slip unavailable" },
       { status: 404 },
