@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
+import {
+  coverPublicUrlForKey,
+  isR2CoversEnabled,
+  putCoverObject,
+} from "@/lib/object-storage";
 
 export type StoredCoverImage = {
   storageKey: string;
@@ -76,6 +81,10 @@ function coverImagePublicUrl(storageKey: string) {
   return `/api/media/covers/${encodedKey}`;
 }
 
+function r2CoverKey(storageKey: string) {
+  return `covers/${storageKey}`;
+}
+
 export function resolveLocalCoverImagePath(storageKey: string) {
   const normalizedKey = storageKey.replace(/\\/g, "/");
   const root = path.resolve(localCoverStorageRoot());
@@ -98,8 +107,30 @@ export async function saveCoverImage(file: File): Promise<StoredCoverImage> {
   const year = String(now.getFullYear());
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const storageKey = [year, month, `${randomUUID()}.png`].join("/");
-  const targetPath = resolveLocalCoverImagePath(storageKey);
   const bytes = Buffer.from(await file.arrayBuffer());
+
+  if (isR2CoversEnabled()) {
+    await putCoverObject(r2CoverKey(storageKey), bytes, COVER_IMAGE_MIME_TYPE);
+
+    const publicUrl = coverPublicUrlForKey(r2CoverKey(storageKey));
+
+    if (!publicUrl) {
+      console.error(
+        "[cover-upload] R2 covers enabled but R2_COVERS_PUBLIC_BASE_URL is missing — cannot build public cover URL",
+      );
+      throw new Error("storage");
+    }
+
+    return {
+      storageKey,
+      publicUrl,
+      originalFileName: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+    };
+  }
+
+  const targetPath = resolveLocalCoverImagePath(storageKey);
 
   await mkdir(path.dirname(targetPath), { recursive: true });
   await writeFile(targetPath, bytes);

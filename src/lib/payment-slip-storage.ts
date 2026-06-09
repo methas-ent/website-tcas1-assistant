@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import {
+  getSlipObject,
+  isR2SlipsEnabled,
+  putSlipObject,
+} from "@/lib/object-storage";
 
 export type StoredPaymentSlip = {
   storageKey: string;
@@ -103,6 +108,10 @@ function localSlipStorageRoot() {
   return resolvedRoot;
 }
 
+function r2SlipKey(storageKey: string) {
+  return `payment-slips/${storageKey}`;
+}
+
 export function resolveLocalPaymentSlipPath(storageKey: string) {
   const normalizedKey = storageKey.replace(/\\/g, "/");
   const root = path.resolve(localSlipStorageRoot());
@@ -164,11 +173,20 @@ export async function savePaymentSlip(
     `${randomUUID()}${safeExtension(file.name, file.type)}`,
   ];
   const storageKey = keyParts.join("/");
-  const targetPath = resolveLocalPaymentSlipPath(storageKey);
   const bytes = Buffer.from(await file.arrayBuffer());
 
-  await mkdir(path.dirname(targetPath), { recursive: true });
-  await writeFile(targetPath, bytes);
+  if (isR2SlipsEnabled()) {
+    await putSlipObject(
+      r2SlipKey(storageKey),
+      bytes,
+      file.type || "application/octet-stream",
+    );
+  } else {
+    const targetPath = resolveLocalPaymentSlipPath(storageKey);
+
+    await mkdir(path.dirname(targetPath), { recursive: true });
+    await writeFile(targetPath, bytes);
+  }
 
   return {
     storageKey,
@@ -176,4 +194,22 @@ export async function savePaymentSlip(
     mimeType: file.type,
     sizeBytes: file.size,
   };
+}
+
+export async function readPaymentSlipBytes(
+  storageKey: string,
+): Promise<Buffer | null> {
+  if (isR2SlipsEnabled()) {
+    const obj = await getSlipObject(r2SlipKey(storageKey));
+
+    if (obj) {
+      return obj;
+    }
+  }
+
+  try {
+    return await readFile(resolveLocalPaymentSlipPath(storageKey));
+  } catch {
+    return null;
+  }
 }
