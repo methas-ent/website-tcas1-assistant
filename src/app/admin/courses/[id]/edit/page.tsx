@@ -283,6 +283,29 @@ export default async function EditCoursePage({
                   </Select>
                 </div>
 
+                <div className="grid gap-2">
+                  <p className="text-sm font-bold text-ink-soft">รูปปกคอร์ส</p>
+                  {course.coverImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      alt={`รูปปกคอร์ส ${course.title}`}
+                      className="aspect-video w-full max-w-md rounded-card border border-line bg-surface-soft object-cover"
+                      src={course.coverImageUrl}
+                    />
+                  ) : (
+                    <p className="rounded-card border border-dashed border-line bg-surface-soft px-4 py-3 text-sm text-ink-muted">
+                      ยังไม่มีรูปปก เลือกไฟล์ด้านล่างเพื่ออัปโหลด
+                    </p>
+                  )}
+                  <Input
+                    accept="image/jpeg,image/png,image/webp"
+                    hint="ไม่บังคับ เลือกไฟล์ใหม่เพื่อเปลี่ยน/เพิ่มรูปปก รองรับ JPG, PNG หรือ WebP ไม่เกิน 5MB"
+                    label="อัปโหลด/เปลี่ยนรูปปก"
+                    name="coverImageFile"
+                    type="file"
+                  />
+                </div>
+
                 <Input
                   accept="video/*"
                   hint="ไม่บังคับ ใช้เฉพาะกรณีต้องการเปลี่ยน VDO หลักอย่างรวดเร็ว"
