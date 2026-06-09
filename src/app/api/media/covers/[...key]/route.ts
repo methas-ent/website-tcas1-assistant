@@ -8,6 +8,24 @@ type CoverImageRouteProps = {
   };
 };
 
+function contentTypeForKey(storageKey: string) {
+  const lower = storageKey.toLowerCase();
+
+  if (lower.endsWith(".png")) {
+    return "image/png";
+  }
+
+  if (lower.endsWith(".webp")) {
+    return "image/webp";
+  }
+
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+    return "image/jpeg";
+  }
+
+  return "application/octet-stream";
+}
+
 export async function GET(_request: Request, { params }: CoverImageRouteProps) {
   const storageKey = params.key.join("/");
 
@@ -23,7 +41,7 @@ export async function GET(_request: Request, { params }: CoverImageRouteProps) {
     headers: {
       "cache-control": "public, max-age=86400, stale-while-revalidate=604800",
       "content-length": String(bytes.byteLength),
-      "content-type": "image/png",
+      "content-type": contentTypeForKey(storageKey),
       "x-content-type-options": "nosniff",
     },
   });

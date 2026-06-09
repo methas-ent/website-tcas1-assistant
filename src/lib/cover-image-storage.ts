@@ -15,7 +15,13 @@ export type StoredCoverImage = {
   sizeBytes: number;
 };
 
-const COVER_IMAGE_MIME_TYPE = "image/png";
+// Cover images accept the common web raster formats. jpg/jpeg both arrive as
+// `image/jpeg`. SVG is intentionally excluded (script execution risk).
+const ALLOWED_COVER_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
 export function getCoverImageMaxBytes() {
   const configured = Number.parseInt(
@@ -28,12 +34,24 @@ export function getCoverImageMaxBytes() {
     : 5 * 1024 * 1024;
 }
 
+function coverImageExtension(mimeType: string) {
+  switch (mimeType) {
+    case "image/png":
+      return ".png";
+    case "image/webp":
+      return ".webp";
+    default:
+      // image/jpeg
+      return ".jpg";
+  }
+}
+
 function assertValidCoverImageFile(file: File) {
   if (!file || file.size <= 0) {
     throw new Error("invalid");
   }
 
-  if (file.type !== COVER_IMAGE_MIME_TYPE) {
+  if (!ALLOWED_COVER_IMAGE_MIME_TYPES.has(file.type)) {
     throw new Error("type");
   }
 
@@ -106,11 +124,12 @@ export async function saveCoverImage(file: File): Promise<StoredCoverImage> {
   const now = new Date();
   const year = String(now.getFullYear());
   const month = String(now.getMonth() + 1).padStart(2, "0");
-  const storageKey = [year, month, `${randomUUID()}.png`].join("/");
+  const extension = coverImageExtension(file.type);
+  const storageKey = [year, month, `${randomUUID()}${extension}`].join("/");
   const bytes = Buffer.from(await file.arrayBuffer());
 
   if (isR2CoversEnabled()) {
-    await putCoverObject(r2CoverKey(storageKey), bytes, COVER_IMAGE_MIME_TYPE);
+    await putCoverObject(r2CoverKey(storageKey), bytes, file.type);
 
     const publicUrl = coverPublicUrlForKey(r2CoverKey(storageKey));
 
