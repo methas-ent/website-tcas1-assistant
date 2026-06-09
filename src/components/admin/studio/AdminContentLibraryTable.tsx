@@ -15,6 +15,7 @@ import {
 } from "@/lib/admin-catalog-actions";
 import { getAdminVideos, formatBytes, formatVideoDate } from "@/lib/admin-video";
 import { deleteVideoAction } from "@/lib/admin-video-actions";
+import { syncPendingBunnyVideos } from "@/lib/video/bunny-sync";
 import {
   getGradeLevelLabel,
   getSubjectCategoryLabel,
@@ -55,6 +56,8 @@ export async function AdminContentLibraryTable({
   searchParams,
 }: AdminContentLibraryTableProps) {
   const activeTab = normalizeTab(searchParams?.tab);
+  // Fallback poll for environments where Bunny can't reach the webhook (dev).
+  await syncPendingBunnyVideos();
   const [courses, packages, videos] = await Promise.all([
     getAdminCourseList(),
     getAdminPackageList(),

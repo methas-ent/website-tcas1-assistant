@@ -11,6 +11,7 @@ import {
 import { requireAdmin } from "@/lib/admin";
 import prisma from "@/lib/db";
 import { getVideoStorageProvider } from "@/lib/video-storage";
+import { isUploadedFile } from "@/lib/uploaded-file";
 
 function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -73,7 +74,7 @@ export async function uploadVideoAction(formData: FormData) {
     !courseId ||
     !isSubjectCategory(subjectCategory) ||
     (gradeLevel && !isGradeLevel(gradeLevel)) ||
-    !(file instanceof File)
+    !isUploadedFile(file)
   ) {
     redirect(`${uploadPath}?error=invalid`);
   }
@@ -166,7 +167,9 @@ export async function uploadVideoAction(formData: FormData) {
           originalFileName: stored.originalFileName,
           mimeType: stored.mimeType,
           sizeBytes: stored.sizeBytes,
-          status: "READY",
+          // LOCAL is READY immediately; cloud providers that transcode
+          // asynchronously (BUNNY) start as PROCESSING until the webhook lands.
+          status: stored.status,
           metadataJson: JSON.stringify({
             description,
             attachedLessonId: lesson?.id ?? null,

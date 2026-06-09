@@ -1,0 +1,77 @@
+name: CI
+
+# Minimal, production-safe CI:
+# - runs against a THROWAWAY Postgres service container (no prod DB, no real secrets)
+# - all env values below are dummy CI placeholders
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Temporary CI database (matches the postgres service above).
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_test?schema=public
+      # Dummy CI secrets — NOT real. Needed because `next build` runs as production.
+      AUTH_SESSION_SECRET: ci-dummy-auth-secret-not-real-please-ignore
+      PLAYBACK_SECRET: ci-dummy-playback-secret-not-real-please-ignore
+      PLAYBACK_TOKEN_TTL_SECONDS: "120"
+      # Dummy seed accounts (seed is idempotent + hashes passwords).
+      ADMIN_EMAIL: ci-admin@example.com
+      ADMIN_PASSWORD: ci-dummy-admin-password-not-real
+      ADMIN_NAME: CI Admin
+      DEMO_STUDENT_EMAIL: ci-student@example.com
+      DEMO_STUDENT_PASSWORD: ci-dummy-student-password-not-real
+      DEMO_STUDENT_NAME: CI Student
+      DEMO_USER_KEY: demo-user
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prisma validate
+        run: npx prisma validate
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Prisma migrate deploy (temporary Postgres)
+        run: npx prisma migrate deploy
+
+      - name: Seed (dummy data)
+        run: npm run db:seed
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

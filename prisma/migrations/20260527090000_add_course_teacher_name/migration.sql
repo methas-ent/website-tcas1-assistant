@@ -1,1 +1,0 @@
-ALTER TABLE "Course" ADD COLUMN "teacherName" TEXT NOT NULL DEFAULT '';

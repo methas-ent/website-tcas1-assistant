@@ -8,7 +8,8 @@ export function getAdminCatalogErrorMessage(error?: string) {
       "กรุณากรอกชื่อคอร์ส วิชา ระดับชั้น ครูผู้สอน ราคา คำอธิบาย รูปปก และ VDO ให้ถูกต้อง",
     "invalid-package":
       "กรุณากรอกชื่อแพ็กเกจ วิชา ระดับชั้น ครูผู้สอน ราคา เลขบท คำอธิบาย รูปปก และ VDO ให้ถูกต้อง",
-    "invalid-cover-image": "กรุณาอัปโหลดรูปปกเป็นไฟล์ PNG ขนาดไม่เกินที่กำหนด",
+    "invalid-cover-image":
+      "กรุณาอัปโหลดรูปปกเป็นไฟล์ JPG, PNG หรือ WebP ขนาดไม่เกินที่กำหนด",
     "invalid-course-video": "กรุณาเลือกไฟล์ VDO สำหรับคอร์ส",
     "invalid-course-video-type": "รองรับเฉพาะไฟล์วิดีโอ MP4, WebM, MOV, M4V หรือ MPEG",
     "invalid-course-video-size": "ไฟล์ VDO มีขนาดใหญ่เกินกว่าที่ตั้งค่าไว้",

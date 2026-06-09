@@ -128,24 +128,28 @@ export default async function EditPackagePage({
               required
             />
           </div>
-          {coursePackage.coverImageUrl ? (
-            <div className="grid gap-2">
-              <p className="text-sm font-bold text-ink-soft">รูปปกปัจจุบัน</p>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+          <div className="grid gap-2">
+            <p className="text-sm font-bold text-ink-soft">รูปปกแพ็กเกจ</p>
+            {coursePackage.coverImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 alt={`รูปปกแพ็กเกจ ${coursePackage.title}`}
                 className="aspect-video w-full max-w-xl rounded-card border border-line bg-surface-soft object-cover"
                 src={coursePackage.coverImageUrl}
               />
-            </div>
-          ) : null}
-          <Input
-            accept="image/png"
-            hint="เลือกไฟล์ใหม่เพื่อเปลี่ยนรูปปกเดิม รองรับเฉพาะ PNG ไม่เกิน 5MB"
-            label="อัปโหลดรูปปก PNG"
-            name="coverImageFile"
-            type="file"
-          />
+            ) : (
+              <p className="rounded-card border border-dashed border-line bg-surface-soft px-4 py-3 text-sm text-ink-muted">
+                ยังไม่มีรูปปก เลือกไฟล์ด้านล่างเพื่ออัปโหลด
+              </p>
+            )}
+            <Input
+              accept="image/jpeg,image/png,image/webp"
+              hint="เลือกไฟล์ใหม่เพื่อเปลี่ยนรูปปกเดิม รองรับ JPG, PNG หรือ WebP ไม่เกิน 5MB"
+              label="อัปโหลด/เปลี่ยนรูปปก"
+              name="coverImageFile"
+              type="file"
+            />
+          </div>
           <Select
             defaultValue={coursePackage.isPublished ? "PUBLISHED" : "DRAFT"}
             label="สถานะแพ็กเกจ"

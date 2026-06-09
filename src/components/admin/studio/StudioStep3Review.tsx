@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -41,9 +42,31 @@ function StudioSubmitActions({
 }) {
   const { pending } = useFormStatus();
   const disabled = pending || hasClientError;
+  const [slow, setSlow] = useState(false);
+
+  // Watchdog: if the submit stays pending too long (large upload, Railway proxy
+  // timeout, or the container dying), tell the admin instead of leaving the
+  // button silently stuck on "กำลังบันทึก..." forever.
+  useEffect(() => {
+    if (!pending) {
+      setSlow(false);
+      return;
+    }
+
+    const timer = setTimeout(() => setSlow(true), 45_000);
+    return () => clearTimeout(timer);
+  }, [pending]);
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+    <div className="flex flex-col gap-2">
+      {slow ? (
+        <p className="rounded-card bg-warning-soft px-4 py-3 text-sm font-semibold text-warning">
+          การบันทึกใช้เวลานานผิดปกติ — หากไฟล์วิดีโอใหญ่ การอัปโหลดผ่าน LOCAL
+          storage บน production อาจหมดเวลา ลองใช้ไฟล์เล็กลง หรือเปิดใช้ Bunny
+          Stream แล้วลองใหม่อีกครั้ง
+        </p>
+      ) : null}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
       <Button
         disabled={disabled}
         name="submitStatus"
@@ -70,6 +93,7 @@ function StudioSubmitActions({
       >
         เผยแพร่
       </Button>
+      </div>
     </div>
   );
 }

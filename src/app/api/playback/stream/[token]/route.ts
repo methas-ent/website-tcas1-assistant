@@ -122,9 +122,12 @@ export async function GET(
   }
 
   if (videoAsset.storageProvider !== "LOCAL") {
+    // Cloud assets (e.g. BUNNY) are played from a signed CDN URL returned by the
+    // authorize route and never proxied through this origin. Reaching here means
+    // a stale token for a migrated asset — refuse rather than guess.
     return NextResponse.json(
-      { error: "Cloud signed playback is not implemented yet" },
-      { status: 501 },
+      { error: "This asset is served via signed CDN playback, not this route" },
+      { status: 409 },
     );
   }
 
