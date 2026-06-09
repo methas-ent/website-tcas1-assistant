@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
-import { isR2Enabled, publicUrlForKey, putObject } from "@/lib/object-storage";
+import {
+  coverPublicUrlForKey,
+  isR2CoversEnabled,
+  putCoverObject,
+} from "@/lib/object-storage";
 
 export type StoredCoverImage = {
   storageKey: string;
@@ -105,14 +109,14 @@ export async function saveCoverImage(file: File): Promise<StoredCoverImage> {
   const storageKey = [year, month, `${randomUUID()}.png`].join("/");
   const bytes = Buffer.from(await file.arrayBuffer());
 
-  if (isR2Enabled()) {
-    await putObject(r2CoverKey(storageKey), bytes, COVER_IMAGE_MIME_TYPE);
+  if (isR2CoversEnabled()) {
+    await putCoverObject(r2CoverKey(storageKey), bytes, COVER_IMAGE_MIME_TYPE);
 
-    const publicUrl = publicUrlForKey(r2CoverKey(storageKey));
+    const publicUrl = coverPublicUrlForKey(r2CoverKey(storageKey));
 
     if (!publicUrl) {
       console.error(
-        "[cover-upload] R2 enabled but R2_PUBLIC_BASE_URL is missing — cannot build public cover URL",
+        "[cover-upload] R2 covers enabled but R2_COVERS_PUBLIC_BASE_URL is missing — cannot build public cover URL",
       );
       throw new Error("storage");
     }

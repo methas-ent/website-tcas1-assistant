@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { getObject, isR2Enabled, putObject } from "@/lib/object-storage";
+import {
+  getSlipObject,
+  isR2SlipsEnabled,
+  putSlipObject,
+} from "@/lib/object-storage";
 
 export type StoredPaymentSlip = {
   storageKey: string;
@@ -171,8 +175,8 @@ export async function savePaymentSlip(
   const storageKey = keyParts.join("/");
   const bytes = Buffer.from(await file.arrayBuffer());
 
-  if (isR2Enabled()) {
-    await putObject(
+  if (isR2SlipsEnabled()) {
+    await putSlipObject(
       r2SlipKey(storageKey),
       bytes,
       file.type || "application/octet-stream",
@@ -195,8 +199,8 @@ export async function savePaymentSlip(
 export async function readPaymentSlipBytes(
   storageKey: string,
 ): Promise<Buffer | null> {
-  if (isR2Enabled()) {
-    const obj = await getObject(r2SlipKey(storageKey));
+  if (isR2SlipsEnabled()) {
+    const obj = await getSlipObject(r2SlipKey(storageKey));
 
     if (obj) {
       return obj;

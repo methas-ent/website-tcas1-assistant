@@ -6,74 +6,133 @@ import {
 
 /**
  * Server-only Cloudflare R2 (S3-compatible) object storage wrapper.
- * R2 is auto-detected from env (see `getR2Config`); when not configured the
- * helpers degrade gracefully so callers can fall back to LOCAL disk.
+ *
+ * Production uses two separate buckets for security isolation:
+ *   - covers: PUBLIC bucket for course/package cover images
+ *     (R2_COVERS_BUCKET_NAME + R2_COVERS_PUBLIC_BASE_URL).
+ *   - slips: PRIVATE bucket for payment slips. Never served via a public
+ *     URL — admin routes stream bytes through `getSlipObject` (R2_SLIPS_BUCKET_NAME).
+ *
+ * All three R2 credentials are shared. Each bucket is auto-detected from env;
+ * when a bucket is not configured the helpers degrade gracefully so callers
+ * can fall back to LOCAL disk.
  */
 
-export type R2Config = {
+type R2Credentials = {
   accountId: string;
   accessKeyId: string;
   secretAccessKey: string;
-  bucket: string;
-  publicBaseUrl: string | null;
 };
 
-export function getR2Config(): R2Config | null {
+function getR2Credentials(): R2Credentials | null {
   const accountId = process.env.R2_ACCOUNT_ID?.trim();
   const accessKeyId = process.env.R2_ACCESS_KEY_ID?.trim();
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY?.trim();
-  const bucket = process.env.R2_BUCKET_NAME?.trim();
 
-  if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {
+  if (!accountId || !accessKeyId || !secretAccessKey) {
     return null;
   }
 
-  const rawPublicBaseUrl = process.env.R2_PUBLIC_BASE_URL?.trim();
-  const publicBaseUrl = rawPublicBaseUrl
-    ? rawPublicBaseUrl.replace(/\/+$/, "")
-    : null;
+  return { accountId, accessKeyId, secretAccessKey };
+}
+
+export type R2CoversConfig = R2Credentials & {
+  bucket: string;
+  publicBaseUrl: string;
+};
+
+export function getR2CoversConfig(): R2CoversConfig | null {
+  const credentials = getR2Credentials();
+
+  if (!credentials) {
+    return null;
+  }
+
+  const bucket = process.env.R2_COVERS_BUCKET_NAME?.trim();
+  const rawPublicBaseUrl = process.env.R2_COVERS_PUBLIC_BASE_URL?.trim();
+
+  // Covers are public; without a public base URL we cannot build usable URLs,
+  // so treat R2 covers as not configured and fall back to LOCAL disk.
+  if (!bucket || !rawPublicBaseUrl) {
+    return null;
+  }
 
   return {
-    accountId,
-    accessKeyId,
-    secretAccessKey,
+    ...credentials,
     bucket,
-    publicBaseUrl,
+    publicBaseUrl: rawPublicBaseUrl.replace(/\/+$/, ""),
   };
 }
 
-export function isR2Enabled(): boolean {
-  return getR2Config() !== null;
+export type R2SlipsConfig = R2Credentials & {
+  bucket: string;
+};
+
+export function getR2SlipsConfig(): R2SlipsConfig | null {
+  const credentials = getR2Credentials();
+
+  if (!credentials) {
+    return null;
+  }
+
+  const bucket = process.env.R2_SLIPS_BUCKET_NAME?.trim();
+
+  if (!bucket) {
+    return null;
+  }
+
+  return { ...credentials, bucket };
+}
+
+export function isR2CoversEnabled(): boolean {
+  return getR2CoversConfig() !== null;
+}
+
+export function isR2SlipsEnabled(): boolean {
+  return getR2SlipsConfig() !== null;
 }
 
 let cachedClient: S3Client | null = null;
 
-function getClient(config: R2Config): S3Client {
+function getClient(credentials: R2Credentials): S3Client {
   if (cachedClient) {
     return cachedClient;
   }
 
+  // Both buckets live in the same R2 account and share credentials, so a
+  // single S3 client (keyed on the account endpoint) serves both.
   cachedClient = new S3Client({
     region: "auto",
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
+    endpoint: `https://${credentials.accountId}.r2.cloudflarestorage.com`,
     credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
     },
   });
 
   return cachedClient;
 }
 
-export async function putObject(
+function encodeKey(key: string): string {
+  return key
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+}
+
+/**
+ * Upload a cover image to the PUBLIC covers bucket only.
+ */
+export async function putCoverObject(
   key: string,
   body: Buffer,
   contentType: string,
 ): Promise<void> {
-  const config = getR2Config();
+  const config = getR2CoversConfig();
 
   if (!config) {
-    throw new Error("r2-not-configured");
+    throw new Error("r2-covers-not-configured");
   }
 
   const client = getClient(config);
@@ -88,8 +147,52 @@ export async function putObject(
   );
 }
 
-export async function getObject(key: string): Promise<Buffer | null> {
-  const config = getR2Config();
+/**
+ * Build the public URL for a cover image key using R2_COVERS_PUBLIC_BASE_URL.
+ */
+export function coverPublicUrlForKey(key: string): string | null {
+  const config = getR2CoversConfig();
+
+  if (!config) {
+    return null;
+  }
+
+  return `${config.publicBaseUrl}/${encodeKey(key)}`;
+}
+
+/**
+ * Upload a payment slip to the PRIVATE slips bucket only. Slips are never
+ * exposed via a public URL — there is intentionally no slip URL helper.
+ */
+export async function putSlipObject(
+  key: string,
+  body: Buffer,
+  contentType: string,
+): Promise<void> {
+  const config = getR2SlipsConfig();
+
+  if (!config) {
+    throw new Error("r2-slips-not-configured");
+  }
+
+  const client = getClient(config);
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: config.bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    }),
+  );
+}
+
+/**
+ * Stream a payment slip from the PRIVATE slips bucket. Used by admin-only
+ * routes that proxy the bytes; the slip is never served publicly.
+ */
+export async function getSlipObject(key: string): Promise<Buffer | null> {
+  const config = getR2SlipsConfig();
 
   if (!config) {
     return null;
@@ -114,20 +217,4 @@ export async function getObject(key: string): Promise<Buffer | null> {
   } catch {
     return null;
   }
-}
-
-export function publicUrlForKey(key: string): string | null {
-  const config = getR2Config();
-
-  if (!config?.publicBaseUrl) {
-    return null;
-  }
-
-  const encodedKey = key
-    .split("/")
-    .filter(Boolean)
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-
-  return `${config.publicBaseUrl}/${encodedKey}`;
 }
