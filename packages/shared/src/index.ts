@@ -84,6 +84,48 @@ export type MobileLessonContext = {
   payTimeExpiresAt?: string | null;
 };
 
+// --- Lesson-question inbox / thread (mobile Chat tab) ---
+
+export type MobileQuestionSenderRole = "STUDENT" | "ADMIN";
+
+export type MobileQuestionMessage = {
+  id: string;
+  senderRole: MobileQuestionSenderRole | string;
+  senderName: string | null;
+  body: string;
+  createdAt: string;
+};
+
+export type MobileQuestionThread = {
+  id: string;
+  status: string;
+  unreadForStudent: boolean;
+  lastMessageAt: string;
+  messages: MobileQuestionMessage[];
+};
+
+export type MobileInboxItem = {
+  id: string;
+  status: string;
+  unreadForStudent: boolean;
+  lastMessageAt: string;
+  messageCount: number;
+  lastMessage: {
+    body: string;
+    senderRole: MobileQuestionSenderRole | string;
+    createdAt: string;
+  } | null;
+  lesson: {
+    id: string;
+    epNumber: number;
+    title: string;
+  };
+  course: {
+    title: string;
+    coverImageUrl: string | null;
+  };
+};
+
 export type PayTimeEligibilityCode =
   | "OK"
   | "NEVER_ENROLLED"
