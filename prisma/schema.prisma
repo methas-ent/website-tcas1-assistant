@@ -45,6 +45,9 @@ model User {
   payTimeOrdersRejected PayTimeOrder[]         @relation("PayTimeOrderRejectedBy")
   videoAccessExtensions VideoAccessExtension[]
 
+  lessonQuestionThreads  LessonQuestionThread[]  @relation("StudentLessonQuestionThreads")
+  lessonQuestionMessages LessonQuestionMessage[] @relation("LessonQuestionMessageSender")
+
   @@index([role])
 }
 
@@ -151,6 +154,7 @@ model Lesson {
   sessions         PlaybackSession[]
   payTimeOrders    PayTimeOrder[]
   accessExtensions VideoAccessExtension[]
+  questionThreads  LessonQuestionThread[]
 
   @@unique([chapterId, epNumber])
   @@index([courseId, sortOrder])
@@ -445,4 +449,42 @@ model VideoAccessExtension {
 
   @@index([userId, lessonId, expiresAt])
   @@index([lessonId, status])
+}
+
+// Lesson-question threads: one per (lesson, student). Powers the mobile Chat
+// tab inbox and the in-lesson question thread. Additive — no existing model or
+// column is modified.
+model LessonQuestionThread {
+  id               String   @id @default(cuid())
+  lessonId         String
+  userId           String
+  status           String   @default("OPEN")
+  unreadForAdmin   Boolean  @default(true)
+  unreadForStudent Boolean  @default(false)
+  lastMessageAt    DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  lesson   Lesson                  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user     User                    @relation("StudentLessonQuestionThreads", fields: [userId], references: [id], onDelete: Cascade)
+  messages LessonQuestionMessage[]
+
+  @@unique([lessonId, userId])
+  @@index([status, lastMessageAt])
+  @@index([userId, lastMessageAt])
+}
+
+model LessonQuestionMessage {
+  id         String   @id @default(cuid())
+  threadId   String
+  senderId   String?
+  senderRole String
+  body       String
+  createdAt  DateTime @default(now())
+
+  thread LessonQuestionThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender User?                @relation("LessonQuestionMessageSender", fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([threadId, createdAt])
+  @@index([senderRole, createdAt])
 }

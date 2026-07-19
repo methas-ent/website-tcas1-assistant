@@ -13,6 +13,7 @@
     "start:railway": "prisma migrate deploy && next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "mobile:start": "npm run start -w @knowledge/mobile",
     "mobile:typecheck": "npm run typecheck -w @knowledge/mobile",
     "mobile:lint": "npm run lint -w @knowledge/mobile",
@@ -48,6 +49,7 @@
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.14",
     "tsx": "^4.19.2",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.10"
   }
 }

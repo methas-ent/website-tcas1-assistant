@@ -3,7 +3,9 @@ import type {
   MobileAuthResponse,
   MobileCourseDetail,
   MobileCourseListItem,
+  MobileInboxItem,
   MobileLessonContext,
+  MobileQuestionThread,
   MobileUser,
   PayTimeOrderCreateResponse,
   PayTimeOrderResponse,
@@ -156,6 +158,34 @@ export class KnowledgeApiClient {
   getLesson(lessonId: string) {
     return this.request<MobileLessonContext>(
       `/api/mobile/lessons/${encodeURIComponent(lessonId)}`,
+    );
+  }
+
+  /** Lesson-question inbox for the Chat tab. */
+  getInbox() {
+    return this.request<{ inbox: MobileInboxItem[] }>("/api/mobile/inbox");
+  }
+
+  /** The student's question thread for a lesson (`thread` is null if none yet). */
+  getLessonQuestionThread(lessonId: string) {
+    return this.request<{ thread: MobileQuestionThread | null }>(
+      `/api/mobile/lessons/${encodeURIComponent(lessonId)}/question-thread`,
+    );
+  }
+
+  /** Post a new question message; returns the updated thread snapshot. */
+  sendLessonQuestion(lessonId: string, body: string) {
+    return this.request<{ thread: MobileQuestionThread | null }>(
+      `/api/mobile/lessons/${encodeURIComponent(lessonId)}/question-thread`,
+      { method: "POST", json: { body } },
+    );
+  }
+
+  /** Mark the student's thread for this lesson as read. */
+  markLessonQuestionThreadRead(lessonId: string) {
+    return this.request<{ ok: true }>(
+      `/api/mobile/lessons/${encodeURIComponent(lessonId)}/question-thread`,
+      { method: "PATCH" },
     );
   }
 
